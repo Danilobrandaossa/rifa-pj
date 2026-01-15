@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import { 
   LayoutDashboard, 
   Ticket, 
@@ -58,10 +59,14 @@ export function Sidebar() {
         </ul>
 
         <div className="absolute bottom-4 left-0 w-full px-3">
-            <button className="flex w-full items-center rounded-lg p-3 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">
-                <LogOut className="h-5 w-5 flex-shrink-0" />
-                <span className="ml-3">Sair</span>
-            </button>
+          <button
+            type="button"
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="flex w-full items-center rounded-lg p-3 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+          >
+            <LogOut className="h-5 w-5 flex-shrink-0" />
+            <span className="ml-3">Sair</span>
+          </button>
         </div>
       </div>
     </aside>
