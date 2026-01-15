@@ -3,24 +3,33 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import { Raffle, Ticket, Reseller, TicketStatus, Sale } from '@/types';
 
-// --- Mock Data Generation ---
-const generateTickets = (count: number): Ticket[] => {
-  return Array.from({ length: count }, (_, i) => {
-    const num = i.toString().padStart(4, '0');
-    // Random status distribution for demo
-    const rand = Math.random();
-    let status: TicketStatus = 'available';
-    if (rand > 0.9) status = 'sold';
-    else if (rand > 0.8) status = 'reserved';
-    
-    return {
-      number: num,
-      status,
-    };
+const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+
+const buildTicketsForRaffle = (raffleId: string): Ticket[] => {
+  const tickets: Ticket[] = [];
+  let currentNumber = 0;
+
+  LETTERS.forEach((letter) => {
+    for (let block = 1; block <= 100; block++) {
+      for (let index = 1; index <= 10; index++) {
+        const number = currentNumber.toString().padStart(4, '0');
+        tickets.push({
+          raffleId,
+          number,
+          status: 'available',
+          groupLetter: letter,
+          block,
+          index,
+        });
+        currentNumber += 1;
+      }
+    }
   });
+
+  return tickets;
 };
 
-const initialTickets = generateTickets(1000);
+const initialTickets: Ticket[] = [];
 
 const initialRafflesMock: Raffle[] = [
   {
@@ -48,7 +57,9 @@ interface RaffleContextType {
   tickets: Ticket[];
   resellers: Reseller[];
   sales: Sale[];
+  createRaffle: (raffle: Raffle) => void;
   updateTicketStatus: (numbers: string[], status: TicketStatus, resellerId?: string) => void;
+  generateTicketsForRaffle: (raffleId: string) => void;
   addReseller: (reseller: Omit<Reseller, 'id' | 'totalSales' | 'balance'>) => void;
   updateReseller: (id: string, data: Partial<Reseller>) => void;
   deleteReseller: (id: string) => void;
@@ -65,10 +76,76 @@ interface RaffleContextType {
 const RaffleContext = createContext<RaffleContextType | undefined>(undefined);
 
 export function RaffleProvider({ children }: { children: ReactNode }) {
-  const [tickets, setTickets] = useState<Ticket[]>(initialTickets);
-  const [raffles] = useState<Raffle[]>(initialRafflesMock);
-  const [resellers, setResellers] = useState<Reseller[]>(initialResellersMock);
-  const [sales, setSales] = useState<Sale[]>([]);
+  const [tickets, setTickets] = useState<Ticket[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('rifa_gestor_data');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.tickets) return parsed.tickets;
+        } catch (e) {
+          console.error('Failed to parse localStorage', e);
+        }
+      }
+    }
+    return initialTickets;
+  });
+
+  const [raffles, setRaffles] = useState<Raffle[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('rifa_gestor_data');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.raffles) return parsed.raffles;
+        } catch (e) {
+          console.error('Failed to parse localStorage', e);
+        }
+      }
+    }
+    return initialRafflesMock;
+  });
+
+  const [resellers, setResellers] = useState<Reseller[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('rifa_gestor_data');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.resellers) return parsed.resellers;
+        } catch (e) {
+          console.error('Failed to parse localStorage', e);
+        }
+      }
+    }
+    return initialResellersMock;
+  });
+
+  const [sales, setSales] = useState<Sale[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('rifa_gestor_data');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.sales) return parsed.sales;
+        } catch (e) {
+          console.error('Failed to parse localStorage', e);
+        }
+      }
+    }
+    return [];
+  });
+
+  // Persist to localStorage
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('rifa_gestor_data', JSON.stringify({ tickets, raffles, resellers, sales }));
+    }
+  }, [tickets, raffles, resellers, sales]);
+
+  const createRaffle = useCallback((raffle: Raffle) => {
+    setRaffles((prev) => [...prev, raffle]);
+  }, []);
 
   const updateTicketStatus = useCallback((numbers: string[], status: TicketStatus, resellerId?: string) => {
     setTickets(prev => prev.map(t => {
@@ -116,7 +193,21 @@ export function RaffleProvider({ children }: { children: ReactNode }) {
         }));
       }
     }
-  }, [raffles]);
+  }, [raffles, resellers]);
+
+  const generateTicketsForRaffle = useCallback(
+    (raffleId: string) => {
+      setTickets((prev) => {
+        const existing = prev.some((t) => t.raffleId === raffleId);
+        if (existing) return prev;
+        const raffle = raffles.find((r) => r.id === raffleId);
+        if (!raffle) return prev;
+        const raffleTickets = buildTicketsForRaffle(raffleId);
+        return [...prev, ...raffleTickets];
+      });
+    },
+    [raffles],
+  );
 
   const addReseller = useCallback((data: Omit<Reseller, 'id' | 'totalSales' | 'balance'>) => {
     const newReseller: Reseller = {
@@ -181,7 +272,9 @@ export function RaffleProvider({ children }: { children: ReactNode }) {
       tickets, 
       resellers, 
       sales,
+      createRaffle,
       updateTicketStatus, 
+      generateTicketsForRaffle,
       addReseller,
       updateReseller,
       deleteReseller,

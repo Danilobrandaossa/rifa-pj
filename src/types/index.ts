@@ -5,6 +5,12 @@ export interface Raffle {
   title: string;
   description?: string;
   imageUrl?: string;
+  image2Url?: string;
+  image3Url?: string;
+  purpose?: string;
+  prize?: string;
+  regulation?: string;
+  ticketBackgroundUrl?: string;
   price: number;
   totalTickets: number;
   drawDate: string; // ISO Date
@@ -15,8 +21,12 @@ export interface Raffle {
 }
 
 export interface Ticket {
+  raffleId?: string;
   number: string;
   status: TicketStatus;
+  groupLetter?: string;
+  block?: number;
+  index?: number;
   resellerId?: string;
   buyerName?: string;
   buyerPhone?: string;

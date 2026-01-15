@@ -10,9 +10,10 @@ import { Ticket, TicketStatus } from '@/types';
 interface TicketGridProps {
   tickets: Ticket[];
   onSelectionChange: (selectedNumbers: string[]) => void;
+  onReserve?: (selectedNumbers: string[]) => void;
 }
 
-export function TicketGrid({ tickets, onSelectionChange }: TicketGridProps) {
+export function TicketGrid({ tickets, onSelectionChange, onReserve }: TicketGridProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<'all' | TicketStatus>('all');
   const [search, setSearch] = useState('');
@@ -173,7 +174,10 @@ export function TicketGrid({ tickets, onSelectionChange }: TicketGridProps) {
               </div>
           </div>
           
-          <Button disabled={selected.size === 0}>
+          <Button 
+            disabled={selected.size === 0}
+            onClick={() => onReserve && onReserve(Array.from(selected))}
+          >
               Reservar Selecionados ({selected.size})
           </Button>
       </div>

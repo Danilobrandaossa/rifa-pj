@@ -7,21 +7,41 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRaffle } from "@/contexts/RaffleContext";
 import { useState } from "react";
+import { useParams } from "next/navigation";
 
 export default function ImprimirBilhetesPage() {
   const { tickets, raffles } = useRaffle();
-  const [statusFilter, setStatusFilter] = useState<string>("reserved");
-  
-  const currentRaffle = raffles[0];
+  const params = useParams();
+  const routeId = params?.id as string | undefined;
 
-  const filteredTickets = tickets.filter(t => {
-      if (statusFilter === "all") return true;
-      return t.status === statusFilter;
+  const [statusFilter, setStatusFilter] = useState<string>("reserved");
+  const [letterFilter, setLetterFilter] = useState<string>("all");
+  const [blockFilter, setBlockFilter] = useState<string>("");
+  const [startNumber, setStartNumber] = useState<string>("");
+  const [endNumber, setEndNumber] = useState<string>("");
+  
+  const currentRaffle = raffles.find((r) => r.id === routeId) || raffles[0];
+  const raffleTickets = currentRaffle ? tickets.filter((t) => t.raffleId === currentRaffle.id) : [];
+
+  const filteredTickets = raffleTickets.filter((t) => {
+    if (statusFilter !== "all" && t.status !== statusFilter) return false;
+    if (letterFilter !== "all" && t.groupLetter && t.groupLetter !== letterFilter) return false;
+    if (blockFilter) {
+      const blockValue = parseInt(blockFilter, 10);
+      if (!Number.isNaN(blockValue) && t.block !== blockValue) return false;
+    }
+    if (startNumber && endNumber) {
+      const start = parseInt(startNumber, 10);
+      const end = parseInt(endNumber, 10);
+      const current = parseInt(t.number, 10);
+      if (!Number.isNaN(start) && !Number.isNaN(end) && (current < start || current > end)) {
+        return false;
+      }
+    }
+    return true;
   });
 
-  // Limit preview to avoid crashing browser with 1000 divs if 'all' selected, 
-  // but for real print usually we want all. Let's limit to 80 (4 pages) for safety in MVP.
-  const displayTickets = filteredTickets.slice(0, 80);
+  const displayTickets = filteredTickets;
 
   const formatDate = (dateStr: string) => {
       return new Date(dateStr).toLocaleDateString('pt-BR');
@@ -61,21 +81,49 @@ export default function ImprimirBilhetesPage() {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Seleção de Grupo Principal</Label>
-            <Select defaultValue="none">
+            <Label>Filtro por Letra</Label>
+            <Select value={letterFilter} onValueChange={setLetterFilter}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Grupo" />
+                <SelectValue placeholder="Letra" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Nenhum grupo principal</SelectItem>
-                <SelectItem value="A">Grupo A</SelectItem>
-                <SelectItem value="B">Grupo B</SelectItem>
+                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="A">A</SelectItem>
+                <SelectItem value="B">B</SelectItem>
+                <SelectItem value="C">C</SelectItem>
+                <SelectItem value="D">D</SelectItem>
+                <SelectItem value="E">E</SelectItem>
+                <SelectItem value="F">F</SelectItem>
+                <SelectItem value="G">G</SelectItem>
+                <SelectItem value="H">H</SelectItem>
+                <SelectItem value="I">I</SelectItem>
+                <SelectItem value="J">J</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Seleção por Subgrupos</Label>
-            <Input placeholder="Selecione múltiplos subgrupos (CTRL+Click)" />
+            <Label>Bloco (ex: 22)</Label>
+            <Input
+              placeholder="Número do bloco"
+              value={blockFilter}
+              onChange={(e) => setBlockFilter(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Intervalo inicial</Label>
+            <Input
+              placeholder="0000"
+              value={startNumber}
+              onChange={(e) => setStartNumber(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Intervalo final</Label>
+            <Input
+              placeholder="9999"
+              value={endNumber}
+              onChange={(e) => setEndNumber(e.target.value)}
+            />
           </div>
         </CardContent>
       </Card>
@@ -135,17 +183,44 @@ export default function ImprimirBilhetesPage() {
           {displayTickets.length > 0 ? (
               <div className="grid grid-cols-4 gap-4 print:grid-cols-4">
                   {displayTickets.map((ticket) => (
-                      <div key={ticket.number} className="border border-black p-2 text-center h-[40mm] flex flex-col justify-between relative break-inside-avoid">
-                          <div className="text-[10px] font-bold uppercase border-b border-black pb-1 mb-1 truncate">{currentRaffle?.title || 'Rifa'}</div>
-                          <div className="text-xs">Sorteio: {currentRaffle ? formatDate(currentRaffle.drawDate) : '--/--/----'}</div>
-                          <div className="text-2xl font-bold my-1">{ticket.number}</div>
-                          <div className="text-[8px] mt-auto">
+                      <div
+                        key={ticket.number}
+                        className="border border-black text-center h-[40mm] flex flex-col justify-between relative break-inside-avoid overflow-hidden"
+                        style={
+                          currentRaffle?.ticketBackgroundUrl
+                            ? {
+                                backgroundImage: `url(${currentRaffle.ticketBackgroundUrl})`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                              }
+                            : undefined
+                        }
+                      >
+                          {currentRaffle?.ticketBackgroundUrl && (
+                            <div className="absolute inset-0 bg-white/80" />
+                          )}
+                          <div className="relative z-10 p-2 h-full flex flex-col justify-between">
+                            <div className="text-[10px] font-bold uppercase border-b border-black pb-1 mb-1 truncate">
+                              {currentRaffle?.title || 'Rifa'}
+                            </div>
+                            <div className="text-xs">
+                              Sorteio: {currentRaffle ? formatDate(currentRaffle.drawDate) : '--/--/----'}
+                            </div>
+                            <div className="text-2xl font-bold my-1">{ticket.number}</div>
+                            <div className="text-[8px]">
+                              {ticket.groupLetter && ticket.block && ticket.index
+                                ? `${ticket.groupLetter}${ticket.block} – Bilhete ${ticket.index}`
+                                : ''}
+                            </div>
+                            <div className="text-[8px]">
                               {currentRaffle ? formatCurrency(currentRaffle.price) : 'R$ 0,00'}
                               {ticket.status === 'reserved' && <span className="ml-1 font-bold">(RES)</span>}
                               {ticket.status === 'sold' && <span className="ml-1 font-bold">(VEND)</span>}
+                            </div>
+                            <div className="text-[7px] mt-1">
+                              ID: {currentRaffle?.id}-{ticket.number}
+                            </div>
                           </div>
-                          
-                          {/* Canhoto simulado */}
                           <div className="absolute right-0 top-0 bottom-0 w-[20px] border-l border-dashed border-black flex items-center justify-center writing-mode-vertical text-[8px]">
                               <span className="rotate-90">{ticket.number}</span>
                           </div>

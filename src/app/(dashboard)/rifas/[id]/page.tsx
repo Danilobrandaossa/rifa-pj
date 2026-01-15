@@ -14,15 +14,25 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { useRaffle } from '@/contexts/RaffleContext';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { useParams } from 'next/navigation';
 
 export default function RaffleDetailsPage() {
-  const { tickets, raffles, resellers, updateTicketStatus, getFinancialStats } = useRaffle();
+  const { tickets, raffles, resellers, updateTicketStatus, getFinancialStats, generateTicketsForRaffle } = useRaffle();
+  const params = useParams();
+  const routeId = params?.id as string | undefined;
 
   // Reservation Form State
   const [reservationResellerId, setReservationResellerId] = useState<string>('');
   const [reservationInput, setReservationInput] = useState<string>('');
 
-  const currentRaffle = raffles[0];
+  // Grid Reservation State
+  const [isReserveDialogOpen, setIsReserveDialogOpen] = useState(false);
+  const [selectedTicketsForReserve, setSelectedTicketsForReserve] = useState<string[]>([]);
+  const [gridResellerId, setGridResellerId] = useState<string>('');
+
+  const currentRaffle = raffles.find((r) => r.id === routeId) || raffles[0];
+  const raffleTickets = currentRaffle ? tickets.filter((t) => t.raffleId === currentRaffle.id) : [];
 
   // Financial Calculations
   const financialStats = useMemo(() => getFinancialStats(currentRaffle?.id || '1'), [currentRaffle, getFinancialStats]);
@@ -70,6 +80,32 @@ export default function RaffleDetailsPage() {
       setReservationInput('');
   };
 
+  const openReserveDialog = (selected: string[]) => {
+    setSelectedTicketsForReserve(selected);
+    setIsReserveDialogOpen(true);
+  };
+
+  const handleConfirmReserveFromGrid = () => {
+    if (!gridResellerId) {
+      alert("Selecione um revendedor.");
+      return;
+    }
+    updateTicketStatus(selectedTicketsForReserve, 'reserved', gridResellerId);
+    setIsReserveDialogOpen(false);
+    setGridResellerId('');
+    setSelectedTicketsForReserve([]);
+    alert(`${selectedTicketsForReserve.length} bilhetes reservados com sucesso.`);
+  };
+
+  const handleGenerateTickets = () => {
+    if (!currentRaffle) return;
+    if (raffleTickets.length > 0) {
+      alert('Os bilhetes desta rifa já foram gerados.');
+      return;
+    }
+    generateTicketsForRaffle(currentRaffle.id);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Actions */}
@@ -87,6 +123,13 @@ export default function RaffleDetailsPage() {
         </div>
         
         <div className="flex flex-wrap gap-2">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleGenerateTickets}
+          >
+            Gerar Bilhetes
+          </Button>
           <Link href="/rifas/1/imprimir">
             <Button variant="secondary" size="sm">
               <Printer className="mr-2 h-4 w-4" /> Imprimir Bilhetes
@@ -167,12 +210,13 @@ export default function RaffleDetailsPage() {
         <TabsContent value="tickets" className="space-y-4">
           <Card>
             <CardHeader>
-               <CardTitle>Lista de Bilhetes</CardTitle>
+              <CardTitle>Lista de Bilhetes</CardTitle>
             </CardHeader>
             <CardContent>
                <TicketGrid 
-                 tickets={tickets} 
+                 tickets={raffleTickets} 
                  onSelectionChange={(selected) => console.log('Selected:', selected)} 
+                 onReserve={openReserveDialog}
                />
             </CardContent>
           </Card>
@@ -253,6 +297,34 @@ export default function RaffleDetailsPage() {
         
         {/* Outras tabs... */}
       </Tabs>
+
+      <Dialog open={isReserveDialogOpen} onOpenChange={setIsReserveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Reserva</DialogTitle>
+            <DialogDescription>
+              Você está prestes a reservar {selectedTicketsForReserve.length} bilhetes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label>Selecione o Revendedor</Label>
+            <Select value={gridResellerId} onValueChange={setGridResellerId}>
+              <SelectTrigger className="mt-1 w-full">
+                <SelectValue placeholder="Selecione um revendedor" />
+              </SelectTrigger>
+              <SelectContent>
+                {resellers.map(r => (
+                  <SelectItem key={r.id} value={r.id}>{r.name} ({r.commissionRate}%)</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReserveDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleConfirmReserveFromGrid}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
