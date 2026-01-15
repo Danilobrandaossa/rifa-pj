@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -14,13 +14,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     
-    const email = (e.target as any).email.value;
-    const password = (e.target as any).password.value;
+    const form = e.currentTarget;
+    const email = (form.elements.namedItem("email") as HTMLInputElement).value;
+    const password = (form.elements.namedItem("password") as HTMLInputElement).value;
 
     try {
       const result = await signIn('credentials', {
@@ -33,10 +34,10 @@ export default function LoginPage() {
         setError('E-mail ou senha incorretos.');
         setLoading(false);
       } else {
-        router.push('/dashboard');
+        router.push('/rifas');
         router.refresh();
       }
-    } catch (err) {
+    } catch {
       setError('Ocorreu um erro ao tentar fazer login.');
       setLoading(false);
     }

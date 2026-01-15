@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, UserPlus, Shield } from "lucide-react";
+import { Trash2, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface User {
@@ -20,26 +20,69 @@ interface User {
 }
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([
-    { id: '1', name: 'Admin Principal', email: 'admin@rifagestor.com', role: 'admin', createdAt: '2024-01-01' },
-    { id: '2', name: 'Gerente', email: 'gerente@rifagestor.com', role: 'editor', createdAt: '2024-01-15' },
-  ]);
-
+  const [users, setUsers] = useState<User[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newUser, setNewUser] = useState({ name: '', email: '', role: 'editor' });
+  const [newUser, setNewUser] = useState({ name: '', email: '', role: 'editor', password: '', confirmPassword: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleAddUser = (e: React.FormEvent) => {
-    e.preventDefault();
-    const user: User = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: newUser.name,
-      email: newUser.email,
-      role: newUser.role as 'admin' | 'editor',
-      createdAt: new Date().toISOString().split('T')[0],
+  useEffect(() => {
+    const loadUsers = async () => {
+      const response = await fetch('/api/users');
+      if (!response.ok) return;
+      const data: User[] = await response.json();
+      setUsers(data);
     };
-    setUsers([...users, user]);
-    setIsModalOpen(false);
-    setNewUser({ name: '', email: '', role: 'editor' });
+
+    loadUsers();
+  }, []);
+
+  const handleAddUser = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError('');
+
+    if (newUser.password.length < 6) {
+      setError('A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
+    if (newUser.password !== newUser.confirmPassword) {
+      setError('As senhas não conferem.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newUser.name,
+          email: newUser.email,
+          password: newUser.password,
+          role: newUser.role,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        setError(data?.error || 'Erro ao cadastrar usuário.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const created: User = await response.json();
+      setUsers([created, ...users]);
+      setIsModalOpen(false);
+      setNewUser({ name: '', email: '', role: 'editor', password: '', confirmPassword: '' });
+      setIsSubmitting(false);
+    } catch {
+      setError('Erro ao cadastrar usuário.');
+      setIsSubmitting(false);
+    }
   };
 
   const handleDeleteUser = (id: string) => {
@@ -97,8 +140,35 @@ export default function UsersPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Senha</Label>
+                <Input 
+                  id="password" 
+                  type="password" 
+                  value={newUser.password}
+                  onChange={e => setNewUser({ ...newUser, password: e.target.value })}
+                  required 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar senha</Label>
+                <Input 
+                  id="confirmPassword" 
+                  type="password" 
+                  value={newUser.confirmPassword}
+                  onChange={e => setNewUser({ ...newUser, confirmPassword: e.target.value })}
+                  required 
+                />
+              </div>
+              {error && (
+                <p className="text-sm text-red-500">
+                  {error}
+                </p>
+              )}
               <DialogFooter>
-                <Button type="submit">Cadastrar</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Cadastrando...' : 'Cadastrar'}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
