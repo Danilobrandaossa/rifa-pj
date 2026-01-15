@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          String    @default("editor") // "admin" or "editor"
+  accounts      Account[]
+  sessions      Session[]
+  raffles       Raffle[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Modelos do Sistema de Rifa
+
+model Raffle {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  price       Float
+  drawDate    DateTime?
+  status      String    @default("active") // "active", "closed"
+  imageUrl    String?
+  
+  // Modality: "hundreds" (00-99), "thousands" (0000-9999), "ten-thousands" (00000-99999)
+  modality    String    @default("thousands") 
+  
+  tickets     Ticket[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  createdBy   String?
+  user        User?     @relation(fields: [createdBy], references: [id])
+}
+
+model Ticket {
+  id        String   @id @default(cuid())
+  number    String
+  status    String   @default("available") // "available", "reserved", "sold"
+  
+  raffleId  String
+  raffle    Raffle   @relation(fields: [raffleId], references: [id], onDelete: Cascade)
+  
+  buyerName   String?
+  buyerPhone  String?
+  
+  resellerId  String?
+  reseller    Reseller? @relation(fields: [resellerId], references: [id])
+  
+  saleId      String?
+  sale        Sale?     @relation(fields: [saleId], references: [id])
+  
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([raffleId, number])
+}
+
+model Reseller {
+  id             String   @id @default(cuid())
+  name           String
+  phone          String
+  email          String?
+  commissionRate Float    @default(0)
+  active         Boolean  @default(true)
+  
+  tickets        Ticket[]
+  sales          Sale[]
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Sale {
+  id            String   @id @default(cuid())
+  totalAmount   Float
+  paymentStatus String   @default("pending") // "pending", "paid"
+  paymentMethod String?
+  
+  buyerName     String
+  
+  resellerId    String?
+  reseller      Reseller? @relation(fields: [resellerId], references: [id])
+  
+  tickets       Ticket[]
+  
+  createdAt     DateTime @default(now())
+}
