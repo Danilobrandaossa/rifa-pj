@@ -76,7 +76,7 @@ export function ResellerForm() {
               min="0" 
               max="100" 
               value={formData.commissionRate} 
-              onChange={e => setFormData({...formData, commissionRate: e.target.value})} 
+              onChange={e => setFormData({...formData, commissionRate: Number(e.target.value)})} 
               required 
             />
           </div>

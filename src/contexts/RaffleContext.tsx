@@ -185,9 +185,6 @@ export function RaffleProvider({ children }: { children: ReactNode }) {
       addReseller,
       updateReseller,
       deleteReseller,
-      settleDebt,
-      addRaffle,
-      deleteRaffle,
       getFinancialStats 
     }}>
       {children}
