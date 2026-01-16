@@ -9,12 +9,21 @@ const buildTicketsForRaffle = (raffle: Raffle): Ticket[] => {
   const tickets: Ticket[] = [];
 
   if (raffle.modality === 'ten_thousand') {
-    let currentNumber = 0;
+    const numbers = Array.from({ length: 10000 }, (_, n) => n.toString().padStart(4, '0'));
+
+    for (let i = numbers.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const temp = numbers[i];
+      numbers[i] = numbers[j];
+      numbers[j] = temp;
+    }
+
+    let currentIndex = 0;
 
     LETTERS.forEach((letter) => {
       for (let block = 1; block <= 100; block++) {
         for (let index = 1; index <= 10; index++) {
-          const number = currentNumber.toString().padStart(4, '0');
+          const number = numbers[currentIndex];
           tickets.push({
             raffleId: raffle.id,
             number,
@@ -23,7 +32,7 @@ const buildTicketsForRaffle = (raffle: Raffle): Ticket[] => {
             block,
             index,
           });
-          currentNumber += 1;
+          currentIndex += 1;
         }
       }
     });
