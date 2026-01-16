@@ -192,15 +192,14 @@ export function RaffleProvider({ children }: { children: ReactNode }) {
       return t;
     }));
 
-    // Se for venda, registrar venda
     if (status === 'sold') {
-      const raffle = raffles[0]; // Simplificação para demo
+      const raffle = raffles[0];
       const newSale: Sale = {
         id: Math.random().toString(36).substr(2, 9),
         raffleId: raffle.id,
         ticketNumbers: numbers,
         totalAmount: numbers.length * raffle.price,
-        buyerName: 'Cliente Balcão', // Em um fluxo real viria do input
+        buyerName: 'Cliente Balcão',
         buyerPhone: '',
         resellerId,
         createdAt: new Date().toISOString(),
@@ -208,14 +207,10 @@ export function RaffleProvider({ children }: { children: ReactNode }) {
       };
       setSales(prev => [newSale, ...prev]);
 
-      // Atualizar saldo do revendedor se houver
       if (resellerId) {
         setResellers(prev => prev.map(r => {
           if (r.id === resellerId) {
             const saleAmount = numbers.length * raffle.price;
-            // A comissão é descontada do que ele deve pagar? Ou é crédito?
-            // Geralmente: Ele deve pagar (Vendas - Comissão).
-            // Aqui vamos somar ao totalSales. O cálculo de dívida será derivado.
             return {
               ...r,
               totalSales: r.totalSales + saleAmount
@@ -225,7 +220,7 @@ export function RaffleProvider({ children }: { children: ReactNode }) {
         }));
       }
     }
-  }, [raffles, resellers]);
+  }, [raffles]);
 
   const generateTicketsForRaffle = useCallback(
     (raffleId: string) => {

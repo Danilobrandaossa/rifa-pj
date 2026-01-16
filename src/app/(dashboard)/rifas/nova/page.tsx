@@ -1,6 +1,7 @@
-'use client';
+"use client";
 
 import { useState, ChangeEvent, FormEvent } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -146,21 +147,45 @@ export default function NovaRifaPage() {
           <div className="space-y-2 lg:col-span-2">
             <Label>Foto Principal*</Label>
             <div className="border border-dashed rounded-md h-40 flex items-center justify-center text-sm text-muted-foreground mb-2">
-              {imageUrl ? <img src={imageUrl} alt="Foto principal" className="h-full w-full object-cover" /> : 'Nenhuma imagem'}
+              {imageUrl ? (
+                <Image
+                  src={imageUrl}
+                  alt="Foto principal"
+                  width={320}
+                  height={160}
+                  className="h-full w-full object-cover"
+                />
+              ) : 'Nenhuma imagem'}
             </div>
             <Input type="file" accept="image/*" onChange={(e) => handleFileChange(e, setImageUrl)} />
           </div>
           <div className="space-y-2">
             <Label>Foto 2</Label>
             <div className="border border-dashed rounded-md h-40 flex items-center justify-center text-sm text-muted-foreground mb-2">
-              {image2Url ? <img src={image2Url} alt="Foto 2" className="h-full w-full object-cover" /> : 'Nenhuma imagem'}
+              {image2Url ? (
+                <Image
+                  src={image2Url}
+                  alt="Foto 2"
+                  width={320}
+                  height={160}
+                  className="h-full w-full object-cover"
+                />
+              ) : 'Nenhuma imagem'}
             </div>
             <Input type="file" accept="image/*" onChange={(e) => handleFileChange(e, setImage2Url)} />
           </div>
           <div className="space-y-2">
             <Label>Foto 3</Label>
             <div className="border border-dashed rounded-md h-40 flex items-center justify-center text-sm text-muted-foreground mb-2">
-              {image3Url ? <img src={image3Url} alt="Foto 3" className="h-full w-full object-cover" /> : 'Nenhuma imagem'}
+              {image3Url ? (
+                <Image
+                  src={image3Url}
+                  alt="Foto 3"
+                  width={320}
+                  height={160}
+                  className="h-full w-full object-cover"
+                />
+              ) : 'Nenhuma imagem'}
             </div>
             <Input type="file" accept="image/*" onChange={(e) => handleFileChange(e, setImage3Url)} />
           </div>
@@ -169,7 +194,15 @@ export default function NovaRifaPage() {
         <div className="space-y-2">
           <Label>Background da impressão (opcional)</Label>
           <div className="border border-dashed rounded-md h-32 flex items-center justify-center text-sm text-muted-foreground mb-2">
-            {backgroundUrl ? <img src={backgroundUrl} alt="Background" className="h-full w-full object-cover" /> : 'Nenhuma imagem'}
+            {backgroundUrl ? (
+              <Image
+                src={backgroundUrl}
+                alt="Background"
+                width={320}
+                height={128}
+                className="h-full w-full object-cover"
+              />
+            ) : 'Nenhuma imagem'}
           </div>
           <Input type="file" accept="image/*" onChange={(e) => handleFileChange(e, setBackgroundUrl)} />
         </div>

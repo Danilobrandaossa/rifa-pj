@@ -1,19 +1,19 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { useRaffle } from "@/contexts/RaffleContext";
-import { useState, useRef, useMemo, useEffect, ChangeEvent } from "react";
+import { useState, useMemo, useEffect, ChangeEvent } from "react";
 import { useParams } from "next/navigation";
+import Image from "next/image";
 import { QRCodeSVG } from "qrcode.react";
 import { Switch } from "@/components/ui/switch";
-import { Printer, Settings2, FileText, Layers, Copy, Image as ImageIcon, Upload } from "lucide-react";
+import { Printer, Settings2, FileText, Layers, Copy, Image as ImageIcon } from "lucide-react";
 import { Raffle, Ticket } from "@/types";
 
 // Tipos para configurações de impressão
@@ -46,7 +46,6 @@ interface TicketRendererProps {
   ticket: Ticket;
   raffle: Raffle;
   layout: LayoutConfig;
-  isRightSide?: boolean;
 }
 
 export default function ImprimirBilhetesPage() {
@@ -56,8 +55,6 @@ export default function ImprimirBilhetesPage() {
 
   // --- Estados de Filtro ---
   const [statusFilter, setStatusFilter] = useState<string>("reserved");
-  const [letterFilter, setLetterFilter] = useState<string>("all");
-  const [blockFilter, setBlockFilter] = useState<string>("");
   const [startNumber, setStartNumber] = useState<string>("");
   const [endNumber, setEndNumber] = useState<string>("");
 
@@ -82,27 +79,6 @@ export default function ImprimirBilhetesPage() {
   const [fonts, setFonts] = useState<FontConfig>({
     primary: 14, id: 9, secondary: 10
   });
-
-  // --- Persistência (Carregar) ---
-  useEffect(() => {
-    if (typeof window !== 'undefined' && routeId) {
-        const savedConfig = localStorage.getItem(`printConfig-${routeId}`);
-        if (savedConfig) {
-            try {
-                const parsed = JSON.parse(savedConfig);
-                if (parsed.layoutLeft) setLayoutLeft(parsed.layoutLeft);
-                if (parsed.layoutRight) setLayoutRight(parsed.layoutRight);
-                if (parsed.fonts) setFonts(parsed.fonts);
-                if (parsed.paperSize) setPaperSize(parsed.paperSize);
-                if (parsed.printMode) setPrintMode(parsed.printMode);
-                if (parsed.bgImage) setBgImage(parsed.bgImage);
-                if (parsed.printBg !== undefined) setPrintBg(parsed.printBg);
-            } catch (e) {
-                console.error("Erro ao carregar configurações de impressão", e);
-            }
-        }
-    }
-  }, [routeId]);
 
   // --- Persistência (Salvar) ---
   useEffect(() => {
@@ -129,11 +105,6 @@ export default function ImprimirBilhetesPage() {
     const currentTickets = tickets.filter((t) => t.raffleId === currentRaffle.id);
     return currentTickets.filter((t) => {
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
-      if (letterFilter !== "all" && t.groupLetter && t.groupLetter !== letterFilter) return false;
-      if (blockFilter) {
-        const blockValue = parseInt(blockFilter, 10);
-        if (!Number.isNaN(blockValue) && t.block !== blockValue) return false;
-      }
       if (startNumber && endNumber) {
         const start = parseInt(startNumber, 10);
         const end = parseInt(endNumber, 10);
@@ -144,11 +115,7 @@ export default function ImprimirBilhetesPage() {
       }
       return true;
     });
-  }, [tickets, currentRaffle, statusFilter, letterFilter, blockFilter, startNumber, endNumber]);
-
-  // Helpers de Formatação
-  const formatDate = (dateStr?: string) => dateStr ? new Date(dateStr).toLocaleDateString('pt-BR') : '--/--/----';
-  const formatCurrency = (val?: number) => val ? val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00';
+  }, [tickets, currentRaffle, statusFilter, startNumber, endNumber]);
 
   // Handler de Upload de Imagem
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -173,8 +140,7 @@ export default function ImprimirBilhetesPage() {
   const TicketRenderer = ({ 
     ticket, 
     raffle, 
-    layout, 
-    isRightSide = false 
+    layout
   }: TicketRendererProps) => {
     if (!ticket || !raffle) return <div style={{ width: `${layout.width}mm`, height: `${layout.height}mm` }} />;
 
@@ -189,13 +155,16 @@ export default function ImprimirBilhetesPage() {
           fontSize: `${fonts.secondary}pt`
         }}
       >
-        {/* Imagem de Fundo */}
         {bgImage && (
-            <img 
-                src={bgImage} 
-                className={`absolute inset-0 w-full h-full object-fill ${!printBg ? 'print:hidden' : ''}`} 
-                alt="Fundo do Bilhete"
+          <div className={`absolute inset-0 ${!printBg ? 'print:hidden' : ''}`}>
+            <Image
+              src={bgImage}
+              alt="Fundo do Bilhete"
+              fill
+              style={{ objectFit: "fill" }}
+              sizes="100vw"
             />
+          </div>
         )}
 
         {/* QR Code */}
@@ -478,7 +447,7 @@ export default function ImprimirBilhetesPage() {
                 Lógica de Renderização dos Bilhetes 
                 Assumindo A4 com 2 colunas por padrão ou conforme layout
             */}
-            {filteredTickets.map((ticket, index) => {
+            {filteredTickets.map((ticket) => {
                 // Cálculo de posição na página para simulação de preview contínuo seria complexo.
                 // Aqui vamos simplificar: renderizar blocos absolutos dentro de containers relativos
                 // Mas para print real, CSS break-inside é melhor.

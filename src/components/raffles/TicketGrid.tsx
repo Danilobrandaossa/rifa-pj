@@ -73,35 +73,6 @@ export function TicketGrid({ tickets, onSelectionChange, onReserve }: TicketGrid
     onSelectionChange(Array.from(newSelected));
   };
 
-  const handleRangeSelect = (input: string) => {
-    // Ex: "1-50" or "10, 20, 30"
-    const ranges = input.split(',').map(s => s.trim());
-    const newSelected = new Set(selected);
-    
-    ranges.forEach(range => {
-      if (range.includes('-')) {
-        const [start, end] = range.split('-').map(Number);
-        if (!isNaN(start) && !isNaN(end)) {
-          for (let i = start; i <= end; i++) {
-             const ticket = tickets.find(t => parseInt(t.number) === i);
-             if (ticket && ticket.status === 'available') {
-                 newSelected.add(ticket.number);
-             }
-          }
-        }
-      } else {
-          // Single number
-          const ticket = tickets.find(t => t.number === range || parseInt(t.number) === parseInt(range));
-          if (ticket && ticket.status === 'available') {
-              newSelected.add(ticket.number);
-          }
-      }
-    });
-    
-    setSelected(newSelected);
-    onSelectionChange(Array.from(newSelected));
-  };
-
   const getStatusColor = (status: TicketStatus) => {
     switch (status) {
       case 'available': return 'bg-slate-50 text-slate-900 hover:bg-slate-100 border-slate-200';
