@@ -112,65 +112,28 @@ interface RaffleContextType {
 const RaffleContext = createContext<RaffleContextType | undefined>(undefined);
 
 export function RaffleProvider({ children }: { children: ReactNode }) {
-  const [tickets, setTickets] = useState<Ticket[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('rifa_gestor_data');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed.tickets) return parsed.tickets;
-        } catch (e) {
-          console.error('Failed to parse localStorage', e);
-        }
-      }
-    }
-    return initialTickets;
-  });
+  const [tickets, setTickets] = useState<Ticket[]>(initialTickets);
+  const [raffles, setRaffles] = useState<Raffle[]>(initialRafflesMock);
+  const [resellers, setResellers] = useState<Reseller[]>(initialResellersMock);
+  const [sales, setSales] = useState<Sale[]>([]);
 
-  const [raffles, setRaffles] = useState<Raffle[]>(() => {
+  // Load from localStorage on mount (client-side only) to avoid hydration mismatch
+  React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('rifa_gestor_data');
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          if (parsed.raffles) return parsed.raffles;
+          if (parsed.tickets) setTickets(parsed.tickets);
+          if (parsed.raffles) setRaffles(parsed.raffles);
+          if (parsed.resellers) setResellers(parsed.resellers);
+          if (parsed.sales) setSales(parsed.sales);
         } catch (e) {
           console.error('Failed to parse localStorage', e);
         }
       }
     }
-    return initialRafflesMock;
-  });
-
-  const [resellers, setResellers] = useState<Reseller[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('rifa_gestor_data');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed.resellers) return parsed.resellers;
-        } catch (e) {
-          console.error('Failed to parse localStorage', e);
-        }
-      }
-    }
-    return initialResellersMock;
-  });
-
-  const [sales, setSales] = useState<Sale[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('rifa_gestor_data');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed.sales) return parsed.sales;
-        } catch (e) {
-          console.error('Failed to parse localStorage', e);
-        }
-      }
-    }
-    return [];
-  });
+  }, []);
 
   // Persist to localStorage
   React.useEffect(() => {

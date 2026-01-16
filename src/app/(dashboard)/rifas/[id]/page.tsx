@@ -384,6 +384,9 @@ export default function RaffleDetailsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Editar Rifa</DialogTitle>
+            <DialogDescription>
+              Altere as informações da rifa abaixo.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>

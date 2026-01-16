@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -68,6 +68,7 @@ export function NewSaleModal({ raffles, resellers, ticketsSample }: NewSaleModal
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Nova Venda</DialogTitle>
+          <DialogDescription>Preencha os dados abaixo para registrar uma nova venda.</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4">
@@ -89,12 +90,12 @@ export function NewSaleModal({ raffles, resellers, ticketsSample }: NewSaleModal
             </div>
             <div>
               <Label htmlFor="reseller">Revendedor (opcional)</Label>
-              <Select value={resellerId ?? ''} onValueChange={(v) => setResellerId(v || undefined)}>
+              <Select value={resellerId ?? 'none'} onValueChange={(v) => setResellerId(v === 'none' ? undefined : v)}>
                 <SelectTrigger className="mt-1 w-full">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="none">Nenhum</SelectItem>
                   {resellers.map(r => (
                     <SelectItem key={r.id} value={r.id}>
                       {r.name} • Comissão {r.commissionRate}%
