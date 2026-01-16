@@ -46,6 +46,7 @@ interface TicketRendererProps {
   ticket: Ticket;
   raffle: Raffle;
   layout: LayoutConfig;
+  isRightSide?: boolean;
 }
 
 export default function ImprimirBilhetesPage() {
