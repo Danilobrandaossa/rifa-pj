@@ -93,6 +93,7 @@ interface RaffleContextType {
   resellers: Reseller[];
   sales: Sale[];
   createRaffle: (raffle: Raffle) => void;
+  updateRaffle: (id: string, data: Partial<Raffle>) => void;
   updateTicketStatus: (numbers: string[], status: TicketStatus, resellerId?: string) => void;
   generateTicketsForRaffle: (raffleId: string) => void;
   addReseller: (reseller: Omit<Reseller, 'id' | 'totalSales' | 'balance'>) => void;
@@ -186,6 +187,10 @@ export function RaffleProvider({ children }: { children: ReactNode }) {
       const raffleTickets = buildTicketsForRaffle(raffle);
       return [...prev, ...raffleTickets];
     });
+  }, []);
+
+  const updateRaffle = useCallback((id: string, data: Partial<Raffle>) => {
+    setRaffles(prev => prev.map(r => (r.id === id ? { ...r, ...data } : r)));
   }, []);
 
   const updateTicketStatus = useCallback((numbers: string[], status: TicketStatus, resellerId?: string) => {
@@ -309,6 +314,7 @@ export function RaffleProvider({ children }: { children: ReactNode }) {
       resellers, 
       sales,
       createRaffle,
+      updateRaffle,
       updateTicketStatus, 
       generateTicketsForRaffle,
       addReseller,

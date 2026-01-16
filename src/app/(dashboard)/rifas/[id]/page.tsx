@@ -15,12 +15,15 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { useRaffle } from '@/contexts/RaffleContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { useParams } from 'next/navigation';
 
 export default function RaffleDetailsPage() {
-  const { tickets, raffles, resellers, updateTicketStatus, getFinancialStats, generateTicketsForRaffle } = useRaffle();
+  const { tickets, raffles, resellers, updateTicketStatus, getFinancialStats, generateTicketsForRaffle, updateRaffle } = useRaffle();
   const params = useParams();
   const routeId = params?.id as string | undefined;
+
+  const [activeTab, setActiveTab] = useState('tickets');
 
   // Reservation Form State
   const [reservationResellerId, setReservationResellerId] = useState<string>('');
@@ -30,6 +33,14 @@ export default function RaffleDetailsPage() {
   const [isReserveDialogOpen, setIsReserveDialogOpen] = useState(false);
   const [selectedTicketsForReserve, setSelectedTicketsForReserve] = useState<string[]>([]);
   const [gridResellerId, setGridResellerId] = useState<string>('');
+
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState(currentRaffle?.title ?? '');
+  const [editPrice, setEditPrice] = useState<string>(currentRaffle ? String(currentRaffle.price) : '');
+  const [editDrawDate, setEditDrawDate] = useState<string>(
+    currentRaffle?.drawDate ? currentRaffle.drawDate.slice(0, 10) : ''
+  );
+  const [editRegulation, setEditRegulation] = useState(currentRaffle?.regulation ?? '');
 
   const currentRaffle = raffles.find((r) => r.id === routeId) || raffles[0];
   const raffleTickets = currentRaffle ? tickets.filter((t) => t.raffleId === currentRaffle.id) : [];
@@ -106,6 +117,17 @@ export default function RaffleDetailsPage() {
     generateTicketsForRaffle(currentRaffle.id);
   };
 
+  const handleSaveRaffleEdits = () => {
+    if (!currentRaffle) return;
+    updateRaffle(currentRaffle.id, {
+      title: editTitle.trim() || currentRaffle.title,
+      price: Number(editPrice) || currentRaffle.price,
+      drawDate: editDrawDate ? new Date(editDrawDate).toISOString() : currentRaffle.drawDate,
+      regulation: editRegulation,
+    });
+    setIsEditDialogOpen(false);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Actions */}
@@ -130,7 +152,7 @@ export default function RaffleDetailsPage() {
           >
             Gerar Bilhetes
           </Button>
-          <Link href="/rifas/1/imprimir">
+          <Link href={`/rifas/${currentRaffle.id}/imprimir`}>
             <Button variant="secondary" size="sm">
               <Printer className="mr-2 h-4 w-4" /> Imprimir Bilhetes
             </Button>
@@ -138,7 +160,7 @@ export default function RaffleDetailsPage() {
            <Button
              variant="secondary"
              size="sm"
-             onClick={() => alert('Visualização dedicada de bilhetes ainda não foi implementada.')}
+             onClick={() => setActiveTab('tickets')}
            >
              <Eye className="mr-2 h-4 w-4" /> Ver Bilhetes
            </Button>
@@ -147,14 +169,14 @@ export default function RaffleDetailsPage() {
              variant="outline"
              size="sm"
              className="text-green-600 border-green-600 hover:bg-green-50"
-             onClick={() => alert('Envio automático para revendedor ainda não foi implementado.')}
+             onClick={() => setActiveTab('reservation')}
            >
              <Share2 className="mr-2 h-4 w-4" /> Enviar para Revendedor
            </Button>
            <Button
              variant="outline"
              size="sm"
-             onClick={() => alert('Edição de dados da rifa ainda não foi implementada.')}
+             onClick={() => setIsEditDialogOpen(true)}
            >
              <Edit className="mr-2 h-4 w-4" /> Editar
            </Button>
@@ -190,7 +212,7 @@ export default function RaffleDetailsPage() {
       </Card>
 
       {/* Tabs */}
-      <Tabs defaultValue="tickets" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="info">Informações</TabsTrigger>
           <TabsTrigger value="tickets">Bilhetes</TabsTrigger>
@@ -354,6 +376,54 @@ export default function RaffleDetailsPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsReserveDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleConfirmReserveFromGrid}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Rifa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Título</Label>
+              <Input className="mt-1" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+            </div>
+            <div>
+              <Label>Preço do Bilhete</Label>
+              <Input
+                type="number"
+                step="0.01"
+                className="mt-1"
+                value={editPrice}
+                onChange={(e) => setEditPrice(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Data do Sorteio</Label>
+              <Input
+                type="date"
+                className="mt-1"
+                value={editDrawDate}
+                onChange={(e) => setEditDrawDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Regulamento</Label>
+              <Textarea
+                className="mt-1"
+                rows={6}
+                value={editRegulation}
+                onChange={(e) => setEditRegulation(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveRaffleEdits}>Salvar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
