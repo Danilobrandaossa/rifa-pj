@@ -17,15 +17,45 @@ export function TicketGrid({ tickets, onSelectionChange, onReserve }: TicketGrid
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<'all' | TicketStatus>('all');
   const [search, setSearch] = useState('');
-  const [rangeInput, setRangeInput] = useState('');
+  
+  // Novos filtros de navegação estruturada
+  const [selectedLetter, setSelectedLetter] = useState<string>('A');
+  const [selectedBlock, setSelectedBlock] = useState<string>('1');
+
+  // Extrair letras e blocos disponíveis
+  const letters = useMemo(() => {
+    const s = new Set(tickets.map(t => t.groupLetter).filter(Boolean));
+    return Array.from(s).sort();
+  }, [tickets]);
+
+  const blocks = useMemo(() => {
+    // Blocos da letra selecionada
+    const s = new Set(tickets
+        .filter(t => t.groupLetter === selectedLetter)
+        .map(t => t.block)
+        .filter(Boolean)
+    );
+    return Array.from(s).sort((a, b) => (a || 0) - (b || 0));
+  }, [tickets, selectedLetter]);
 
   const filteredTickets = useMemo(() => {
     return tickets.filter((t) => {
+      // 1. Filtro hierárquico (Prioridade)
+      // Se tivermos letras definidas nos tickets, usamos o modo de navegação por blocos
+      const hasStructure = t.groupLetter && t.block;
+      if (hasStructure) {
+          if (t.groupLetter !== selectedLetter) return false;
+          // Se quiser ver todos da letra, pode deixar block vazio, mas por padrão vamos focar no bloco
+          if (selectedBlock && t.block !== parseInt(selectedBlock)) return false;
+      }
+
+      // 2. Filtros de Status e Busca (Aplicam-se sobre o bloco atual ou globalmente se não tiver estrutura)
       if (filter !== 'all' && t.status !== filter) return false;
       if (search && !t.number.includes(search)) return false;
+      
       return true;
     });
-  }, [tickets, filter, search]);
+  }, [tickets, filter, search, selectedLetter, selectedBlock]);
 
   const toggleTicket = (number: string) => {
     const newSelected = new Set(selected);
@@ -38,9 +68,9 @@ export function TicketGrid({ tickets, onSelectionChange, onReserve }: TicketGrid
     onSelectionChange(Array.from(newSelected));
   };
 
-  const handleRangeSelect = () => {
+  const handleRangeSelect = (input: string) => {
     // Ex: "1-50" or "10, 20, 30"
-    const ranges = rangeInput.split(',').map(s => s.trim());
+    const ranges = input.split(',').map(s => s.trim());
     const newSelected = new Set(selected);
     
     ranges.forEach(range => {
@@ -48,12 +78,6 @@ export function TicketGrid({ tickets, onSelectionChange, onReserve }: TicketGrid
         const [start, end] = range.split('-').map(Number);
         if (!isNaN(start) && !isNaN(end)) {
           for (let i = start; i <= end; i++) {
-            // Pad start/end based on ticket format logic if needed, assumes number string matching
-             // Simple check: find ticket with this number (as string)
-             // For simplicity, assuming tickets are '0001' etc. logic outside, here just matching what's available
-             // But actually, we should select based on existing tickets.
-             // Let's assume ticket.number is numeric string.
-             // Find matching ticket in props to ensure it exists and is available
              const ticket = tickets.find(t => parseInt(t.number) === i);
              if (ticket && ticket.status === 'available') {
                  newSelected.add(ticket.number);
@@ -62,7 +86,7 @@ export function TicketGrid({ tickets, onSelectionChange, onReserve }: TicketGrid
         }
       } else {
           // Single number
-          const ticket = tickets.find(t => t.number === range);
+          const ticket = tickets.find(t => t.number === range || parseInt(t.number) === parseInt(range));
           if (ticket && ticket.status === 'available') {
               newSelected.add(ticket.number);
           }
@@ -71,21 +95,65 @@ export function TicketGrid({ tickets, onSelectionChange, onReserve }: TicketGrid
     
     setSelected(newSelected);
     onSelectionChange(Array.from(newSelected));
-    setRangeInput('');
   };
 
   const getStatusColor = (status: TicketStatus) => {
     switch (status) {
-      case 'available': return 'bg-slate-100 text-slate-900 hover:bg-slate-200 border-slate-200';
-      case 'reserved': return 'bg-yellow-100 text-yellow-800 border-yellow-200 cursor-not-allowed';
-      case 'sold': return 'bg-green-100 text-green-800 border-green-200 cursor-not-allowed';
-      case 'blocked': return 'bg-red-100 text-red-800 border-red-200 cursor-not-allowed';
-      default: return 'bg-slate-100';
+      case 'available': return 'bg-slate-50 text-slate-900 hover:bg-slate-100 border-slate-200';
+      case 'reserved': return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+      case 'sold': return 'bg-green-50 text-green-700 border-green-200';
+      case 'blocked': return 'bg-red-50 text-red-700 border-red-200';
+      default: return 'bg-slate-50';
     }
   };
 
   return (
     <div className="space-y-4">
+      {/* Navegação Estruturada (Letras e Blocos) */}
+      {letters.length > 0 && (
+        <div className="bg-slate-50 p-4 rounded-lg border space-y-4">
+            <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">Selecione a Letra (Grupo)</label>
+                <div className="flex flex-wrap gap-2">
+                    {letters.map(letter => (
+                        <button
+                            key={letter}
+                            onClick={() => { setSelectedLetter(letter); setSelectedBlock('1'); }}
+                            className={cn(
+                                "w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all border",
+                                selectedLetter === letter 
+                                    ? "bg-blue-600 text-white border-blue-600 shadow-md" 
+                                    : "bg-white text-slate-600 border-slate-200 hover:border-blue-400 hover:text-blue-600"
+                            )}
+                        >
+                            {letter}
+                        </button>
+                    ))}
+                </div>
+            </div>
+            
+            {blocks.length > 0 && (
+                <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-2 block">Selecione o Bloco (10 bilhetes)</label>
+                    <select 
+                        className="h-9 w-full md:w-[200px] rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        value={selectedBlock}
+                        onChange={(e) => setSelectedBlock(e.target.value)}
+                    >
+                        {blocks.map(block => (
+                            <option key={block} value={block}>
+                                Bloco {block} ({selectedLetter}{block})
+                            </option>
+                        ))}
+                    </select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                        Exibindo bilhetes do bloco {selectedLetter}{selectedBlock}
+                    </p>
+                </div>
+            )}
+        </div>
+      )}
+
       {/* Filters & Actions */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-2">
@@ -106,26 +174,34 @@ export function TicketGrid({ tickets, onSelectionChange, onReserve }: TicketGrid
               setFilter(value);
             }}
           >
-            <option value="all">Todos</option>
+            <option value="all">Status: Todos</option>
             <option value="available">Disponíveis</option>
             <option value="reserved">Reservados</option>
             <option value="sold">Vendidos</option>
           </select>
         </div>
         
+        {/* Quick Range Select (Simplified) */}
         <div className="flex items-center gap-2">
-            <Input 
-                placeholder="Ex: 1-50, 100" 
-                value={rangeInput}
-                onChange={(e) => setRangeInput(e.target.value)}
-                className="w-[150px]"
-            />
-            <Button onClick={handleRangeSelect} variant="secondary">Selecionar</Button>
+            <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                    // Selecionar todos visíveis
+                    const visibleIds = filteredTickets.filter(t => t.status === 'available').map(t => t.number);
+                    const newSelected = new Set(selected);
+                    visibleIds.forEach(id => newSelected.add(id));
+                    setSelected(newSelected);
+                    onSelectionChange(Array.from(newSelected));
+                }}
+            >
+                Selecionar Todos do Bloco
+            </Button>
         </div>
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-5 gap-2 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-15">
+      <div className="grid grid-cols-5 gap-3 sm:grid-cols-5 md:grid-cols-10">
         {filteredTickets.map((ticket) => {
           const isSelected = selected.has(ticket.number);
           const isAvailable = ticket.status === 'available';
@@ -136,12 +212,13 @@ export function TicketGrid({ tickets, onSelectionChange, onReserve }: TicketGrid
               onClick={() => isAvailable && toggleTicket(ticket.number)}
               disabled={!isAvailable}
               className={cn(
-                "flex h-10 w-full items-center justify-center rounded-md border text-xs font-medium transition-all",
+                "flex flex-col h-14 w-full items-center justify-center rounded-lg border text-xs font-medium transition-all shadow-sm",
                 getStatusColor(ticket.status),
                 isSelected && isAvailable && "bg-blue-600 text-white border-blue-600 hover:bg-blue-700 ring-2 ring-blue-300 ring-offset-1"
               )}
             >
-              {ticket.number}
+              <span className="text-[10px] opacity-70">{ticket.groupLetter}{ticket.block}</span>
+              <span className="text-sm font-bold">{ticket.number}</span>
             </button>
           );
         })}

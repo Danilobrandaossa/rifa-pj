@@ -5,26 +5,52 @@ import { Raffle, Ticket, Reseller, TicketStatus, Sale } from '@/types';
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
 
-const buildTicketsForRaffle = (raffleId: string): Ticket[] => {
+const buildTicketsForRaffle = (raffle: Raffle): Ticket[] => {
   const tickets: Ticket[] = [];
-  let currentNumber = 0;
 
-  LETTERS.forEach((letter) => {
-    for (let block = 1; block <= 100; block++) {
-      for (let index = 1; index <= 10; index++) {
-        const number = currentNumber.toString().padStart(4, '0');
-        tickets.push({
-          raffleId,
-          number,
-          status: 'available',
-          groupLetter: letter,
-          block,
-          index,
-        });
-        currentNumber += 1;
+  if (raffle.modality === 'ten_thousand') {
+    let currentNumber = 0;
+
+    LETTERS.forEach((letter) => {
+      for (let block = 1; block <= 100; block++) {
+        for (let index = 1; index <= 10; index++) {
+          const number = currentNumber.toString().padStart(4, '0');
+          tickets.push({
+            raffleId: raffle.id,
+            number,
+            status: 'available',
+            groupLetter: letter,
+            block,
+            index,
+          });
+          currentNumber += 1;
+        }
       }
+    });
+
+    return tickets;
+  }
+
+  if (raffle.modality === 'thousand') {
+    for (let n = 0; n < 1000; n++) {
+      const number = n.toString().padStart(3, '0');
+      tickets.push({
+        raffleId: raffle.id,
+        number,
+        status: 'available',
+      });
     }
-  });
+    return tickets;
+  }
+
+  for (let n = 0; n < 100; n++) {
+    const number = n.toString().padStart(2, '0');
+    tickets.push({
+      raffleId: raffle.id,
+      number,
+      status: 'available',
+    });
+  }
 
   return tickets;
 };
@@ -145,6 +171,12 @@ export function RaffleProvider({ children }: { children: ReactNode }) {
 
   const createRaffle = useCallback((raffle: Raffle) => {
     setRaffles((prev) => [...prev, raffle]);
+    setTickets((prev) => {
+      const existing = prev.some((t) => t.raffleId === raffle.id);
+      if (existing) return prev;
+      const raffleTickets = buildTicketsForRaffle(raffle);
+      return [...prev, ...raffleTickets];
+    });
   }, []);
 
   const updateTicketStatus = useCallback((numbers: string[], status: TicketStatus, resellerId?: string) => {
@@ -202,7 +234,7 @@ export function RaffleProvider({ children }: { children: ReactNode }) {
         if (existing) return prev;
         const raffle = raffles.find((r) => r.id === raffleId);
         if (!raffle) return prev;
-        const raffleTickets = buildTicketsForRaffle(raffleId);
+        const raffleTickets = buildTicketsForRaffle(raffle);
         return [...prev, ...raffleTickets];
       });
     },

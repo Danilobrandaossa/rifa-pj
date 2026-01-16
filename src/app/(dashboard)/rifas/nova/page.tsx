@@ -51,6 +51,14 @@ export default function NovaRifaPage() {
     }
 
     const id = crypto.randomUUID();
+
+    let totalTickets = 10000;
+    if (modality === 'hundred') {
+      totalTickets = 100;
+    } else if (modality === 'thousand') {
+      totalTickets = 1000;
+    }
+
     const raffle: Raffle = {
       id,
       title: title.trim(),
@@ -63,7 +71,7 @@ export default function NovaRifaPage() {
       regulation: regulation || undefined,
       ticketBackgroundUrl: backgroundUrl || imageUrl,
       price: parseFloat(price.replace(',', '.')),
-      totalTickets: 10000,
+      totalTickets,
       drawDate: new Date(drawDate).toISOString(),
       status: 'active',
       ticketsSold: 0,
@@ -102,11 +110,11 @@ export default function NovaRifaPage() {
           </div>
         </div>
 
-        <div className="rounded-md border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-900">
-          <div className="font-semibold">Nova funcionalidade: Geração otimizada de bilhetes</div>
+        <div className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+          <div className="font-semibold">Geração automática de bilhetes</div>
           <p>
-            Agora a criação de rifas é mais rápida. Os bilhetes não são gerados automaticamente durante a criação da rifa.
-            Após criar a rifa, você deverá acessar a página da rifa e clicar no botão &quot;Gerar bilhetes&quot;.
+            Assim que você salvar a rifa, os bilhetes serão gerados automaticamente de acordo com a modalidade escolhida.
+            Depois, é só acessar a aba &quot;Bilhetes&quot; para visualizar e gerenciar.
           </p>
         </div>
 
@@ -118,6 +126,8 @@ export default function NovaRifaPage() {
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="hundred">Dezena (00 a 99)</SelectItem>
+                <SelectItem value="thousand">Centena (000 a 999)</SelectItem>
                 <SelectItem value="ten_thousand">Milhar (0000 a 9999)</SelectItem>
               </SelectContent>
             </Select>
@@ -198,4 +208,3 @@ export default function NovaRifaPage() {
     </div>
   );
 }
-

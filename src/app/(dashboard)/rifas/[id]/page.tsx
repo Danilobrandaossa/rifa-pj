@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TicketGrid } from '@/components/raffles/TicketGrid';
-import { ArrowLeft, Printer, Eye, Share2, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Printer, Eye, Share2, Edit, Trash2, Ticket as TicketIcon } from 'lucide-react';
 import Link from 'next/link';
 import { NewSaleModal } from '@/components/sales/NewSaleModal';
 import { ResellersTable } from '@/components/resellers/ResellersTable';
@@ -213,11 +213,28 @@ export default function RaffleDetailsPage() {
               <CardTitle>Lista de Bilhetes</CardTitle>
             </CardHeader>
             <CardContent>
-               <TicketGrid 
-                 tickets={raffleTickets} 
-                 onSelectionChange={(selected) => console.log('Selected:', selected)} 
-                 onReserve={openReserveDialog}
-               />
+               {raffleTickets.length === 0 ? (
+                 <div className="flex flex-col items-center justify-center py-12 space-y-4 text-center">
+                    <div className="bg-slate-100 p-4 rounded-full">
+                        <TicketIcon className="w-8 h-8 text-slate-400" />
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="text-lg font-medium">Nenhum bilhete gerado</h3>
+                        <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                            Para visualizar e gerenciar os bilhetes (0000-9999), você precisa gerar a estrutura de blocos primeiro.
+                        </p>
+                    </div>
+                    <Button onClick={handleGenerateTickets} size="lg" className="mt-4">
+                        Gerar 10.000 Bilhetes
+                    </Button>
+                 </div>
+               ) : (
+                 <TicketGrid 
+                   tickets={raffleTickets} 
+                   onSelectionChange={(selected) => console.log('Selected:', selected)} 
+                   onReserve={openReserveDialog}
+                 />
+               )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -291,6 +308,21 @@ export default function RaffleDetailsPage() {
               >
                 Reservar Bilhetes
               </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="regulation" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Regulamento da Rifa</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="prose max-w-none whitespace-pre-wrap text-sm text-muted-foreground">
+                {currentRaffle?.regulation && currentRaffle.regulation.trim().length > 0
+                  ? currentRaffle.regulation
+                  : "Nenhum regulamento cadastrado para esta rifa."}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

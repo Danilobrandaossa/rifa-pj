@@ -28,7 +28,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-slate-950 text-white transition-transform">
+    <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-slate-950 text-white transition-transform print:hidden">
       <div className="flex h-16 items-center justify-center border-b border-slate-800 px-6">
         <h1 className="text-xl font-bold tracking-tight">RifaGestor</h1>
       </div>
