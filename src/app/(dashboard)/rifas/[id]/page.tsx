@@ -23,6 +23,9 @@ export default function RaffleDetailsPage() {
   const params = useParams();
   const routeId = params?.id as string | undefined;
 
+  const currentRaffle = raffles.find((r) => r.id === routeId) || raffles[0];
+  const raffleTickets = currentRaffle ? tickets.filter((t) => t.raffleId === currentRaffle.id) : [];
+
   const [activeTab, setActiveTab] = useState('tickets');
 
   // Reservation Form State
@@ -41,9 +44,6 @@ export default function RaffleDetailsPage() {
     currentRaffle?.drawDate ? currentRaffle.drawDate.slice(0, 10) : ''
   );
   const [editRegulation, setEditRegulation] = useState(currentRaffle?.regulation ?? '');
-
-  const currentRaffle = raffles.find((r) => r.id === routeId) || raffles[0];
-  const raffleTickets = currentRaffle ? tickets.filter((t) => t.raffleId === currentRaffle.id) : [];
 
   // Financial Calculations
   const financialStats = useMemo(() => getFinancialStats(currentRaffle?.id || '1'), [currentRaffle, getFinancialStats]);
