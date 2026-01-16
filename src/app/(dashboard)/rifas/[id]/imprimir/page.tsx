@@ -9,9 +9,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useRaffle } from "@/contexts/RaffleContext";
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect, ChangeEvent } from "react";
 import { useParams } from "next/navigation";
-import { Printer, Settings2, FileText, Layers, Copy } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+import { Switch } from "@/components/ui/switch";
+import { Printer, Settings2, FileText, Layers, Copy, Image as ImageIcon, Upload } from "lucide-react";
+import { Raffle, Ticket } from "@/types";
 
 // Tipos para configurações de impressão
 type PaperSize = 'A4' | 'A5';
@@ -24,13 +27,26 @@ interface LayoutConfig {
   height: number;
   qrTop: number;
   qrLeft: number;
+  qrSize: number;
   stubWidth: number; // Largura do canhoto
+  // Posicionamento de elementos (opcional, se 0 usa padrão)
+  numberTop: number;
+  numberLeft: number;
+  idTop: number;
+  idLeft: number;
 }
 
 interface FontConfig {
   primary: number;
   id: number;
   secondary: number;
+}
+
+interface TicketRendererProps {
+  ticket: Ticket;
+  raffle: Raffle;
+  layout: LayoutConfig;
+  isRightSide?: boolean;
 }
 
 export default function ImprimirBilhetesPage() {
@@ -49,19 +65,60 @@ export default function ImprimirBilhetesPage() {
   const [paperSize, setPaperSize] = useState<PaperSize>('A4');
   const [printMode, setPrintMode] = useState<PrintMode>('standard');
   const [secondaryRaffleId, setSecondaryRaffleId] = useState<string>('none');
+  const [bgImage, setBgImage] = useState<string | null>(null);
+  const [printBg, setPrintBg] = useState<boolean>(false);
 
   // Configurações de Layout (Valores padrão em mm)
   const [layoutLeft, setLayoutLeft] = useState<LayoutConfig>({
-    top: 8, left: 15, width: 90, height: 40, qrTop: 10, qrLeft: 60, stubWidth: 15
+    top: 8, left: 15, width: 90, height: 40, qrTop: 5, qrLeft: 65, qrSize: 20, stubWidth: 15,
+    numberTop: 20, numberLeft: 45, idTop: 35, idLeft: 20
   });
   
   const [layoutRight, setLayoutRight] = useState<LayoutConfig>({
-    top: 8, left: 110, width: 90, height: 40, qrTop: 10, qrLeft: 60, stubWidth: 15
+    top: 8, left: 110, width: 90, height: 40, qrTop: 5, qrLeft: 65, qrSize: 20, stubWidth: 15,
+    numberTop: 20, numberLeft: 45, idTop: 35, idLeft: 20
   });
 
   const [fonts, setFonts] = useState<FontConfig>({
     primary: 14, id: 9, secondary: 10
   });
+
+  // --- Persistência (Carregar) ---
+  useEffect(() => {
+    if (typeof window !== 'undefined' && routeId) {
+        const savedConfig = localStorage.getItem(`printConfig-${routeId}`);
+        if (savedConfig) {
+            try {
+                const parsed = JSON.parse(savedConfig);
+                if (parsed.layoutLeft) setLayoutLeft(parsed.layoutLeft);
+                if (parsed.layoutRight) setLayoutRight(parsed.layoutRight);
+                if (parsed.fonts) setFonts(parsed.fonts);
+                if (parsed.paperSize) setPaperSize(parsed.paperSize);
+                if (parsed.printMode) setPrintMode(parsed.printMode);
+                if (parsed.bgImage) setBgImage(parsed.bgImage);
+                if (parsed.printBg !== undefined) setPrintBg(parsed.printBg);
+            } catch (e) {
+                console.error("Erro ao carregar configurações de impressão", e);
+            }
+        }
+    }
+  }, [routeId]);
+
+  // --- Persistência (Salvar) ---
+  useEffect(() => {
+    if (typeof window !== 'undefined' && routeId) {
+        const configToSave = {
+            layoutLeft,
+            layoutRight,
+            fonts,
+            paperSize,
+            printMode,
+            bgImage,
+            printBg
+        };
+        localStorage.setItem(`printConfig-${routeId}`, JSON.stringify(configToSave));
+    }
+  }, [layoutLeft, layoutRight, fonts, paperSize, printMode, bgImage, printBg, routeId]);
 
   // --- Dados ---
   const currentRaffle = raffles.find((r) => r.id === routeId) || raffles[0];
@@ -93,6 +150,20 @@ export default function ImprimirBilhetesPage() {
   const formatDate = (dateStr?: string) => dateStr ? new Date(dateStr).toLocaleDateString('pt-BR') : '--/--/----';
   const formatCurrency = (val?: number) => val ? val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00';
 
+  // Handler de Upload de Imagem
+  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Converter para Base64 para persistência
+      const reader = new FileReader();
+      reader.onloadend = () => {
+          const base64String = reader.result as string;
+          setBgImage(base64String);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Handler de Impressão
   const handlePrint = () => {
     window.print();
@@ -104,17 +175,12 @@ export default function ImprimirBilhetesPage() {
     raffle, 
     layout, 
     isRightSide = false 
-  }: { 
-    ticket: any, 
-    raffle: any, 
-    layout: LayoutConfig, 
-    isRightSide?: boolean 
-  }) => {
+  }: TicketRendererProps) => {
     if (!ticket || !raffle) return <div style={{ width: `${layout.width}mm`, height: `${layout.height}mm` }} />;
 
     return (
       <div
-        className="absolute border border-black overflow-hidden bg-white text-black"
+        className={`absolute border border-black overflow-hidden text-black ${!bgImage ? 'bg-white' : ''}`}
         style={{
           top: `${layout.top}mm`,
           left: `${layout.left}mm`, // Posicionamento absoluto na folha
@@ -123,64 +189,60 @@ export default function ImprimirBilhetesPage() {
           fontSize: `${fonts.secondary}pt`
         }}
       >
-        {/* Canhoto (Stub) */}
+        {/* Imagem de Fundo */}
+        {bgImage && (
+            <img 
+                src={bgImage} 
+                className={`absolute inset-0 w-full h-full object-fill ${!printBg ? 'print:hidden' : ''}`} 
+                alt="Fundo do Bilhete"
+            />
+        )}
+
+        {/* QR Code */}
         <div 
-          className="absolute top-0 bottom-0 border-r border-dashed border-black flex flex-col items-center justify-center text-center bg-gray-50"
-          style={{ width: `${layout.stubWidth}mm`, left: 0 }}
-        >
-          <div className="writing-mode-vertical rotate-180 transform whitespace-nowrap text-[0.7em] font-bold">
-            {raffle.title.substring(0, 15)}
-          </div>
-          <div className="writing-mode-vertical rotate-180 transform font-mono font-bold mt-2" style={{ fontSize: `${fonts.id}pt` }}>
-            {ticket.number}
-          </div>
-        </div>
-
-        {/* Corpo do Bilhete */}
-        <div className="absolute top-0 bottom-0 right-0 p-2 flex flex-col justify-between" style={{ left: `${layout.stubWidth}mm` }}>
-          {/* Cabeçalho */}
-          <div className="border-b border-black pb-1 mb-1">
-            <div className="font-bold uppercase truncate leading-tight" style={{ fontSize: `${fonts.primary}pt` }}>
-              {raffle.title}
-            </div>
-            <div className="flex justify-between items-center text-[0.8em] mt-1 text-gray-600">
-              <span>Sorteio: {formatDate(raffle.drawDate)}</span>
-              <span className="font-mono">{formatCurrency(raffle.price)}</span>
-            </div>
-          </div>
-
-          {/* Número Principal */}
-          <div className="flex-1 flex items-center justify-center">
-             <span className="font-bold font-mono tracking-widest" style={{ fontSize: `${fonts.primary + 8}pt` }}>
-                {ticket.number}
-             </span>
-          </div>
-
-          {/* Rodapé / Status */}
-          <div className="text-[0.7em] flex justify-between items-end border-t border-gray-200 pt-1">
-             <div>
-               <div>ID: {raffle.id.substring(0,4)}-{ticket.number}</div>
-               {ticket.buyerName && <div className="truncate max-w-[20mm]">{ticket.buyerName}</div>}
-             </div>
-             <div>
-                {ticket.status === 'sold' && <Badge variant="default" className="h-4 text-[0.6em] px-1">PAGO</Badge>}
-                {ticket.status === 'reserved' && <Badge variant="outline" className="h-4 text-[0.6em] px-1 border-yellow-600 text-yellow-700">RES</Badge>}
-             </div>
-          </div>
-        </div>
-
-        {/* QR Code Simulado */}
-        <div 
-            className="absolute border border-gray-300 bg-white flex items-center justify-center"
+            className="absolute z-20"
             style={{
                 top: `${layout.qrTop}mm`,
                 left: `${layout.qrLeft}mm`,
-                width: '18mm',
-                height: '18mm'
+                width: `${layout.qrSize}mm`,
+                height: `${layout.qrSize}mm`
             }}
         >
-            <div className="text-[6px] text-center text-gray-400">QR CODE</div>
+            <QRCodeSVG 
+                value={`${typeof window !== 'undefined' ? window.location.origin : 'https://rifagestor.com.br'}/verificar/${raffle.id}/${ticket.number}`} 
+                size={100} 
+                style={{ width: '100%', height: '100%' }}
+                level="M"
+            />
         </div>
+
+        {/* Canhoto (Stub) - REMOVIDO A PEDIDO */}
+        {/* Corpo do Bilhete (Apenas Textos Fixos) - REMOVIDO A PEDIDO */}
+
+        {/* Número Principal (Absoluto) */}
+        <div 
+            className="absolute font-bold font-mono tracking-widest z-20"
+            style={{ 
+                top: `${layout.numberTop}mm`, 
+                left: `${layout.numberLeft}mm`,
+                fontSize: `${fonts.primary + 8}pt`
+            }}
+        >
+            {ticket.number}
+        </div>
+
+        {/* ID (Absoluto) */}
+        <div 
+            className="absolute z-20"
+            style={{ 
+                top: `${layout.idTop}mm`, 
+                left: `${layout.idLeft}mm`,
+                fontSize: `${fonts.secondary}pt`
+            }}
+        >
+            ID: {raffle.id.substring(0,4)}-{ticket.number}
+        </div>
+
       </div>
     );
   };
@@ -315,6 +377,27 @@ export default function ImprimirBilhetesPage() {
             </CardContent>
         </Card>
 
+        {/* Imagem de Fundo (Gabarito) */}
+        <Card>
+            <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4" /> Imagem de Fundo / Gabarito
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="space-y-2">
+                    <Label className="text-xs">Upload de Imagem</Label>
+                    <div className="flex items-center gap-2">
+                         <Input type="file" accept="image/*" onChange={handleImageUpload} className="h-8 text-xs" />
+                    </div>
+                </div>
+                <div className="flex items-center justify-between">
+                    <Label className="text-xs">Imprimir Fundo?</Label>
+                    <Switch checked={printBg} onCheckedChange={setPrintBg} />
+                </div>
+            </CardContent>
+        </Card>
+
         {/* 3. Ajustes de Layout Fino */}
         <Card>
             <CardHeader className="pb-3">
@@ -336,6 +419,11 @@ export default function ImprimirBilhetesPage() {
                             <div><Label className="text-[10px]">Height</Label><Input type="number" className="h-7" value={layoutLeft.height} onChange={e => setLayoutLeft({...layoutLeft, height: Number(e.target.value)})} /></div>
                             <div><Label className="text-[10px]">QR Top</Label><Input type="number" className="h-7" value={layoutLeft.qrTop} onChange={e => setLayoutLeft({...layoutLeft, qrTop: Number(e.target.value)})} /></div>
                             <div><Label className="text-[10px]">QR Left</Label><Input type="number" className="h-7" value={layoutLeft.qrLeft} onChange={e => setLayoutLeft({...layoutLeft, qrLeft: Number(e.target.value)})} /></div>
+                            <div><Label className="text-[10px]">QR Size</Label><Input type="number" className="h-7" value={layoutLeft.qrSize} onChange={e => setLayoutLeft({...layoutLeft, qrSize: Number(e.target.value)})} /></div>
+                            <div><Label className="text-[10px]">Nº Top</Label><Input type="number" className="h-7" value={layoutLeft.numberTop} onChange={e => setLayoutLeft({...layoutLeft, numberTop: Number(e.target.value)})} /></div>
+                            <div><Label className="text-[10px]">Nº Left</Label><Input type="number" className="h-7" value={layoutLeft.numberLeft} onChange={e => setLayoutLeft({...layoutLeft, numberLeft: Number(e.target.value)})} /></div>
+                            <div><Label className="text-[10px]">ID Top</Label><Input type="number" className="h-7" value={layoutLeft.idTop} onChange={e => setLayoutLeft({...layoutLeft, idTop: Number(e.target.value)})} /></div>
+                            <div><Label className="text-[10px]">ID Left</Label><Input type="number" className="h-7" value={layoutLeft.idLeft} onChange={e => setLayoutLeft({...layoutLeft, idLeft: Number(e.target.value)})} /></div>
                         </div>
                     </TabsContent>
 
@@ -348,6 +436,11 @@ export default function ImprimirBilhetesPage() {
                             <div><Label className="text-[10px]">Height</Label><Input type="number" className="h-7" value={layoutRight.height} onChange={e => setLayoutRight({...layoutRight, height: Number(e.target.value)})} /></div>
                             <div><Label className="text-[10px]">QR Top</Label><Input type="number" className="h-7" value={layoutRight.qrTop} onChange={e => setLayoutRight({...layoutRight, qrTop: Number(e.target.value)})} /></div>
                             <div><Label className="text-[10px]">QR Left</Label><Input type="number" className="h-7" value={layoutRight.qrLeft} onChange={e => setLayoutRight({...layoutRight, qrLeft: Number(e.target.value)})} /></div>
+                            <div><Label className="text-[10px]">QR Size</Label><Input type="number" className="h-7" value={layoutRight.qrSize} onChange={e => setLayoutRight({...layoutRight, qrSize: Number(e.target.value)})} /></div>
+                            <div><Label className="text-[10px]">Nº Top</Label><Input type="number" className="h-7" value={layoutRight.numberTop} onChange={e => setLayoutRight({...layoutRight, numberTop: Number(e.target.value)})} /></div>
+                            <div><Label className="text-[10px]">Nº Left</Label><Input type="number" className="h-7" value={layoutRight.numberLeft} onChange={e => setLayoutRight({...layoutRight, numberLeft: Number(e.target.value)})} /></div>
+                            <div><Label className="text-[10px]">ID Top</Label><Input type="number" className="h-7" value={layoutRight.idTop} onChange={e => setLayoutRight({...layoutRight, idTop: Number(e.target.value)})} /></div>
+                            <div><Label className="text-[10px]">ID Left</Label><Input type="number" className="h-7" value={layoutRight.idLeft} onChange={e => setLayoutRight({...layoutRight, idLeft: Number(e.target.value)})} /></div>
                         </div>
                     </TabsContent>
                 </Tabs>

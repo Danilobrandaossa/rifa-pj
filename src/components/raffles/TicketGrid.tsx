@@ -22,20 +22,25 @@ export function TicketGrid({ tickets, onSelectionChange, onReserve }: TicketGrid
   const [selectedLetter, setSelectedLetter] = useState<string>('A');
   const [selectedBlock, setSelectedBlock] = useState<string>('1');
 
-  // Extrair letras e blocos disponíveis
-  const letters = useMemo(() => {
-    const s = new Set(tickets.map(t => t.groupLetter).filter(Boolean));
-    return Array.from(s).sort();
+  // Extrair letras e blocos disponíveis garantindo tipos fortes
+  const letters = useMemo<string[]>(() => {
+    const set = new Set<string>();
+    tickets.forEach((t) => {
+      if (t.groupLetter) {
+        set.add(t.groupLetter);
+      }
+    });
+    return Array.from(set).sort();
   }, [tickets]);
 
-  const blocks = useMemo(() => {
-    // Blocos da letra selecionada
-    const s = new Set(tickets
-        .filter(t => t.groupLetter === selectedLetter)
-        .map(t => t.block)
-        .filter(Boolean)
-    );
-    return Array.from(s).sort((a, b) => (a || 0) - (b || 0));
+  const blocks = useMemo<number[]>(() => {
+    const set = new Set<number>();
+    tickets.forEach((t) => {
+      if (t.groupLetter === selectedLetter && typeof t.block === 'number') {
+        set.add(t.block);
+      }
+    });
+    return Array.from(set).sort((a, b) => a - b);
   }, [tickets, selectedLetter]);
 
   const filteredTickets = useMemo(() => {
