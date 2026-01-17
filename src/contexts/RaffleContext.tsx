@@ -109,6 +109,7 @@ interface RaffleContextType {
   updateRaffle: (id: string, data: Partial<Raffle>) => void;
   updateTicketStatus: (raffleId: string, numbers: string[], status: TicketStatus, resellerId?: string) => void;
   generateTicketsForRaffle: (raffleId: string) => void;
+  regenerateTicketsForRaffle: (raffleId: string) => boolean;
   addReseller: (reseller: Omit<Reseller, 'id' | 'totalSales' | 'balance'>) => void;
   updateReseller: (id: string, data: Partial<Reseller>) => void;
   deleteReseller: (id: string) => void;
@@ -355,6 +356,41 @@ export function RaffleProvider({ children }: { children: ReactNode }) {
     [raffles],
   );
 
+  const regenerateTicketsForRaffle = useCallback(
+    (raffleId: string): boolean => {
+      const raffle = raffles.find((r) => r.id === raffleId);
+      if (!raffle) return false;
+
+      const raffleTickets = tickets.filter((t) => t.raffleId === raffleId);
+      const hasUsage = raffleTickets.some(
+        (t) => t.status === 'sold' || t.status === 'reserved',
+      );
+
+      if (hasUsage) {
+        console.warn(
+          'Cannot regenerate tickets: raffle has reserved or sold tickets.',
+        );
+        return false;
+      }
+
+      const newTickets = buildTicketsForRaffle(raffle);
+
+      setTickets((prev) => {
+        const others = prev.filter((t) => t.raffleId !== raffleId);
+        return [...others, ...newTickets];
+      });
+
+      setRaffles((prev) =>
+        prev.map((r) =>
+          r.id === raffleId ? { ...r, randomizedTickets: true } : r,
+        ),
+      );
+
+      return true;
+    },
+    [raffles, tickets],
+  );
+
   const addReseller = useCallback((data: Omit<Reseller, 'id' | 'totalSales' | 'balance'>) => {
     const newReseller: Reseller = {
       ...data,
@@ -422,6 +458,7 @@ export function RaffleProvider({ children }: { children: ReactNode }) {
       updateRaffle,
       updateTicketStatus, 
       generateTicketsForRaffle,
+      regenerateTicketsForRaffle,
       addReseller,
       updateReseller,
       deleteReseller,

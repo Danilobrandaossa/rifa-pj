@@ -20,7 +20,7 @@ import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 
 export default function RaffleDetailsPage() {
-  const { tickets, raffles, resellers, updateTicketStatus, getFinancialStats, generateTicketsForRaffle, updateRaffle, clearRaffleTickets } = useRaffle();
+  const { tickets, raffles, resellers, updateTicketStatus, getFinancialStats, generateTicketsForRaffle, regenerateTicketsForRaffle, updateRaffle, clearRaffleTickets } = useRaffle();
   const params = useParams();
   const router = useRouter();
   const routeId = params?.id as string | undefined;
@@ -28,6 +28,7 @@ export default function RaffleDetailsPage() {
   const currentRaffle = raffles.find((r) => r.id === routeId) || raffles[0];
   const raffleTickets = currentRaffle ? tickets.filter((t) => t.raffleId === currentRaffle.id) : [];
   const hasSales = raffleTickets.some(t => t.status === 'sold');
+  const hasReserved = raffleTickets.some(t => t.status === 'reserved');
 
   const handleClearTickets = () => {
       if (!currentRaffle) return;
@@ -129,6 +130,19 @@ export default function RaffleDetailsPage() {
       return;
     }
     generateTicketsForRaffle(currentRaffle.id);
+  };
+
+  const handleRegenerateTickets = () => {
+    if (!currentRaffle) return;
+    if (!confirm('Regenerar os bilhetes desta rifa? Só é permitido se não houver reservas ou vendas.')) {
+      return;
+    }
+    const success = regenerateTicketsForRaffle(currentRaffle.id);
+    if (!success) {
+      alert('Não foi possível regenerar: já existem bilhetes reservados ou vendidos.');
+      return;
+    }
+    alert('Bilhetes regenerados com sucesso em ordem aleatória.');
   };
 
   // Image Upload State
@@ -323,11 +337,27 @@ export default function RaffleDetailsPage() {
                     </Button>
                  </div>
                ) : (
-                 <TicketGrid 
-                   tickets={raffleTickets} 
-                   onSelectionChange={(selected) => console.log('Selected:', selected)} 
-                   onReserve={openReserveDialog}
-                 />
+                 <>
+                   <div className="flex justify-between items-center mb-4">
+                     <div className="text-sm text-muted-foreground">
+                       Total de bilhetes: {raffleTickets.length}
+                     </div>
+                     {!hasSales && !hasReserved && (
+                       <Button
+                         variant="outline"
+                         size="sm"
+                         onClick={handleRegenerateTickets}
+                       >
+                         Regenerar Bilhetes (Aleatório)
+                       </Button>
+                     )}
+                   </div>
+                   <TicketGrid 
+                     tickets={raffleTickets} 
+                     onSelectionChange={(selected) => console.log('Selected:', selected)} 
+                     onReserve={openReserveDialog}
+                   />
+                 </>
                )}
             </CardContent>
           </Card>

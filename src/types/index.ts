@@ -18,6 +18,7 @@ export interface Raffle {
   ticketsSold: number;
   ticketsReserved: number;
   modality: 'hundred' | 'thousand' | 'ten_thousand'; // 0-99, 000-999, etc.
+  randomizedTickets?: boolean;
 }
 
 export interface Ticket {
