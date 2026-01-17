@@ -5,18 +5,24 @@ import { Raffle, Ticket, Reseller, TicketStatus, Sale } from '@/types';
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
 
+const shuffle = (arr: string[]): string[] => {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const temp = copy[i];
+    copy[i] = copy[j];
+    copy[j] = temp;
+  }
+  return copy;
+};
+
 const buildTicketsForRaffle = (raffle: Raffle): Ticket[] => {
   const tickets: Ticket[] = [];
 
   if (raffle.modality === 'ten_thousand') {
-    const numbers = Array.from({ length: 10000 }, (_, n) => n.toString().padStart(4, '0'));
-
-    for (let i = numbers.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      const temp = numbers[i];
-      numbers[i] = numbers[j];
-      numbers[j] = temp;
-    }
+    const numbers = shuffle(
+      Array.from({ length: 10000 }, (_, n) => n.toString().padStart(4, '0')),
+    );
 
     let currentIndex = 0;
 
@@ -41,25 +47,32 @@ const buildTicketsForRaffle = (raffle: Raffle): Ticket[] => {
   }
 
   if (raffle.modality === 'thousand') {
-    for (let n = 0; n < 1000; n++) {
-      const number = n.toString().padStart(3, '0');
+    const numbers = shuffle(
+      Array.from({ length: 1000 }, (_, n) => n.toString().padStart(3, '0')),
+    );
+
+    numbers.forEach((number) => {
       tickets.push({
         raffleId: raffle.id,
         number,
         status: 'available',
       });
-    }
+    });
+
     return tickets;
   }
 
-  for (let n = 0; n < 100; n++) {
-    const number = n.toString().padStart(2, '0');
+  const numbers = shuffle(
+    Array.from({ length: 100 }, (_, n) => n.toString().padStart(2, '0')),
+  );
+
+  numbers.forEach((number) => {
     tickets.push({
       raffleId: raffle.id,
       number,
       status: 'available',
     });
-  }
+  });
 
   return tickets;
 };
