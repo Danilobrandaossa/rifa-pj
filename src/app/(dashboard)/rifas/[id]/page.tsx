@@ -164,8 +164,8 @@ export default function RaffleDetailsPage() {
       price: Number(editPrice) || currentRaffle.price,
       drawDate: editDrawDate ? new Date(editDrawDate).toISOString() : currentRaffle.drawDate,
       regulation: editRegulation,
-      imageUrl: editImageUrl || null,
-      ticketBackgroundUrl: editBgUrl || null,
+      imageUrl: editImageUrl || undefined,
+      ticketBackgroundUrl: editBgUrl || undefined,
     });
     setIsEditDialogOpen(false);
   };
