@@ -49,7 +49,7 @@ export function NewSaleModal({ raffles, resellers, ticketsSample }: NewSaleModal
     // We would need to update context to accept buyer info or just rely on the 'sold' status trigger in context 
     // which creates a generic sale record.
     // For now, let's just trigger the sale.
-    updateTicketStatus(selectedNumbers, 'sold', resellerId);
+    updateTicketStatus(raffleId, selectedNumbers, 'sold', resellerId);
     
     setOpen(false);
     setBuyerName('');

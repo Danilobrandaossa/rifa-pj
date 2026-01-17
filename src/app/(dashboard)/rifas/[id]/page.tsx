@@ -16,15 +16,29 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { useRaffle } from '@/contexts/RaffleContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { useParams } from 'next/navigation';
+import Image from 'next/image';
+import { useParams, useRouter } from 'next/navigation';
 
 export default function RaffleDetailsPage() {
-  const { tickets, raffles, resellers, updateTicketStatus, getFinancialStats, generateTicketsForRaffle, updateRaffle } = useRaffle();
+  const { tickets, raffles, resellers, updateTicketStatus, getFinancialStats, generateTicketsForRaffle, updateRaffle, clearRaffleTickets } = useRaffle();
   const params = useParams();
+  const router = useRouter();
   const routeId = params?.id as string | undefined;
 
   const currentRaffle = raffles.find((r) => r.id === routeId) || raffles[0];
   const raffleTickets = currentRaffle ? tickets.filter((t) => t.raffleId === currentRaffle.id) : [];
+  const hasSales = raffleTickets.some(t => t.status === 'sold');
+
+  const handleClearTickets = () => {
+      if (!currentRaffle) return;
+      if (hasSales) {
+          alert("Não é possível excluir bilhetes pois já existem vendas realizadas.");
+          return;
+      }
+      if (confirm('Tem certeza que deseja apagar todos os bilhetes desta rifa? Esta ação é irreversível.')) {
+          clearRaffleTickets(currentRaffle.id);
+      }
+  };
 
   const [activeTab, setActiveTab] = useState('tickets');
 
@@ -85,7 +99,7 @@ export default function RaffleDetailsPage() {
           return;
       }
 
-      updateTicketStatus(validNumbers, 'reserved', reservationResellerId);
+      updateTicketStatus(currentRaffle.id, validNumbers, 'reserved', reservationResellerId);
 
       alert(`${validNumbers.length} bilhetes reservados com sucesso para o revendedor.`);
       setReservationInput('');
@@ -101,7 +115,7 @@ export default function RaffleDetailsPage() {
       alert("Selecione um revendedor.");
       return;
     }
-    updateTicketStatus(selectedTicketsForReserve, 'reserved', gridResellerId);
+    updateTicketStatus(currentRaffle.id, selectedTicketsForReserve, 'reserved', gridResellerId);
     setIsReserveDialogOpen(false);
     setGridResellerId('');
     setSelectedTicketsForReserve([]);
@@ -117,6 +131,32 @@ export default function RaffleDetailsPage() {
     generateTicketsForRaffle(currentRaffle.id);
   };
 
+  // Image Upload State
+  const [editImageUrl, setEditImageUrl] = useState<string>('');
+  const [editBgUrl, setEditBgUrl] = useState<string>('');
+
+  const handleOpenEditDialog = () => {
+    if (!currentRaffle) return;
+    setEditTitle(currentRaffle.title);
+    setEditPrice(String(currentRaffle.price));
+    setEditDrawDate(currentRaffle.drawDate ? currentRaffle.drawDate.slice(0, 10) : '');
+    setEditRegulation(currentRaffle.regulation ?? '');
+    setEditImageUrl(currentRaffle.imageUrl ?? '');
+    setEditBgUrl(currentRaffle.ticketBackgroundUrl ?? '');
+    setIsEditDialogOpen(true);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, setter: (value: string) => void) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setter(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSaveRaffleEdits = () => {
     if (!currentRaffle) return;
     updateRaffle(currentRaffle.id, {
@@ -124,6 +164,8 @@ export default function RaffleDetailsPage() {
       price: Number(editPrice) || currentRaffle.price,
       drawDate: editDrawDate ? new Date(editDrawDate).toISOString() : currentRaffle.drawDate,
       regulation: editRegulation,
+      imageUrl: editImageUrl || null,
+      ticketBackgroundUrl: editBgUrl || null,
     });
     setIsEditDialogOpen(false);
   };
@@ -139,19 +181,29 @@ export default function RaffleDetailsPage() {
              </Button>
            </Link>
            <div>
-             <h2 className="text-2xl font-bold tracking-tight">A&A premiações Bros 160</h2>
-             <p className="text-muted-foreground text-sm">(Milhar) 0000 à 9999</p>
+             <h2 className="text-2xl font-bold tracking-tight">{currentRaffle?.title}</h2>
+             <p className="text-muted-foreground text-sm">({currentRaffle?.modality === 'ten_thousand' ? '0000-9999' : currentRaffle?.modality})</p>
            </div>
         </div>
         
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleGenerateTickets}
-          >
-            Gerar Bilhetes
-          </Button>
+          {raffleTickets.length === 0 ? (
+            <Button
+                variant="default"
+                size="sm"
+                onClick={handleGenerateTickets}
+            >
+                Gerar Bilhetes
+            </Button>
+          ) : !hasSales ? (
+            <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleClearTickets}
+            >
+                <Trash2 className="mr-2 h-4 w-4" /> Excluir Bilhetes
+            </Button>
+          ) : null}
           <Link href={`/rifas/${currentRaffle.id}/imprimir`}>
             <Button variant="secondary" size="sm">
               <Printer className="mr-2 h-4 w-4" /> Imprimir Bilhetes
@@ -160,7 +212,7 @@ export default function RaffleDetailsPage() {
            <Button
              variant="secondary"
              size="sm"
-             onClick={() => setActiveTab('tickets')}
+             onClick={() => router.push(`/rifas/${currentRaffle.id}/bilhetes`)}
            >
              <Eye className="mr-2 h-4 w-4" /> Ver Bilhetes
            </Button>
@@ -176,7 +228,7 @@ export default function RaffleDetailsPage() {
            <Button
              variant="outline"
              size="sm"
-             onClick={() => setIsEditDialogOpen(true)}
+             onClick={handleOpenEditDialog}
            >
              <Edit className="mr-2 h-4 w-4" /> Editar
            </Button>
@@ -190,26 +242,46 @@ export default function RaffleDetailsPage() {
         </div>
       </div>
 
-      {/* Main Banner Card */}
-      <Card className="bg-gradient-to-r from-slate-900 to-slate-800 text-white border-none">
-        <CardContent className="p-6">
-           <div className="flex justify-between items-start">
-              <div>
-                 <h3 className="text-xl font-bold">A&A premiações Bros 160</h3>
-                 <p className="text-slate-300 text-sm mt-1">(Milhar) 0000 à 9999</p>
-                 <div className="flex gap-4 mt-4 text-sm text-slate-400">
-                    <span className="flex items-center gap-1">📅 Sorteio: 06/03/2026</span>
-                    <span className="flex items-center gap-1">🎟️ {financialStats.soldCount} de {currentRaffle.totalTickets} bilhetes vendidos</span>
-                    <span className="flex items-center gap-1">🕒 Criado: 08/01/2026</span>
-                 </div>
-              </div>
-              <div className="text-right">
-                 <Badge className="bg-green-500 hover:bg-green-600 mb-2">Ativa</Badge>
-                 <div className="text-2xl font-bold">R$ 10,00</div>
+      {/* Main Banner */}
+      {currentRaffle?.imageUrl ? (
+        <div className="relative w-full h-48 md:h-64 lg:h-80 rounded-xl overflow-hidden shadow-md">
+           <Image 
+              src={currentRaffle.imageUrl} 
+              alt={currentRaffle.title}
+              fill
+              className="object-cover"
+           />
+           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+           <div className="absolute bottom-6 left-6 text-white">
+              <h1 className="text-3xl font-bold shadow-sm">{currentRaffle.title}</h1>
+              <div className="flex gap-4 mt-2 text-sm text-slate-200 font-medium">
+                  <span className="flex items-center gap-1">📅 Sorteio: {currentRaffle?.drawDate ? new Date(currentRaffle.drawDate).toLocaleDateString() : 'Não definido'}</span>
+                  <span className="flex items-center gap-1">💰 Preço: R$ {currentRaffle?.price.toFixed(2)}</span>
               </div>
            </div>
-        </CardContent>
-      </Card>
+           <Badge className="absolute top-4 right-4 bg-green-500 hover:bg-green-600 text-base px-3 py-1">
+             {currentRaffle?.status === 'active' ? 'Ativa' : 'Inativa'}
+           </Badge>
+        </div>
+      ) : (
+        <Card className="bg-gradient-to-r from-slate-900 to-slate-800 text-white border-none">
+            <CardContent className="p-6">
+            <div className="flex justify-between items-start">
+                <div>
+                    <h3 className="text-xl font-bold">{currentRaffle?.title}</h3>
+                    <p className="text-slate-300 text-sm mt-1">{currentRaffle?.description || 'Sem descrição'}</p>
+                    <div className="flex gap-4 mt-4 text-sm text-slate-400">
+                        <span className="flex items-center gap-1">📅 Sorteio: {currentRaffle?.drawDate ? new Date(currentRaffle.drawDate).toLocaleDateString() : 'Não definido'}</span>
+                        <span className="flex items-center gap-1">💰 Preço: R$ {currentRaffle?.price.toFixed(2)}</span>
+                    </div>
+                </div>
+                <Badge className="bg-slate-500">
+                    {currentRaffle?.status === 'active' ? 'Ativa' : 'Inativa'}
+                </Badge>
+            </div>
+            </CardContent>
+        </Card>
+      )}
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
@@ -268,19 +340,36 @@ export default function RaffleDetailsPage() {
                <div className="grid gap-4 md:grid-cols-4">
                  <div className="rounded-lg border p-4">
                    <div className="text-sm text-muted-foreground">Valor Total</div>
-                   <div className="text-2xl font-bold">R$ 100.000,00</div>
+                   <div className="text-2xl font-bold">
+                     {financialStats.totalPotentialValue.toLocaleString('pt-BR', {
+                       style: 'currency',
+                       currency: 'BRL',
+                     })}
+                   </div>
                  </div>
                  <div className="rounded-lg border p-4">
                    <div className="text-sm text-muted-foreground">Vendas Totais</div>
-                   <div className="text-2xl font-bold">0 bilhetes</div>
+                   <div className="text-2xl font-bold">
+                     {financialStats.soldCount} bilhetes
+                   </div>
                  </div>
                  <div className="rounded-lg border p-4">
                    <div className="text-sm text-muted-foreground">Comissões</div>
-                   <div className="text-2xl font-bold">R$ 1.500,00</div>
+                   <div className="text-2xl font-bold">
+                     {financialStats.totalCommissions.toLocaleString('pt-BR', {
+                       style: 'currency',
+                       currency: 'BRL',
+                     })}
+                   </div>
                  </div>
                  <div className="rounded-lg border p-4">
                    <div className="text-sm text-muted-foreground">Lucro Estimado</div>
-                   <div className="text-2xl font-bold">R$ 3.250,00</div>
+                   <div className="text-2xl font-bold">
+                     {financialStats.estimatedProfit.toLocaleString('pt-BR', {
+                       style: 'currency',
+                       currency: 'BRL',
+                     })}
+                   </div>
                  </div>
                </div>
                <div className="mt-4 text-sm text-muted-foreground">Resumo financeiro e gráficos podem ser conectados ao backend posteriormente.</div>
@@ -349,7 +438,6 @@ export default function RaffleDetailsPage() {
           </Card>
         </TabsContent>
         
-        {/* Outras tabs... */}
       </Tabs>
 
       <Dialog open={isReserveDialogOpen} onOpenChange={setIsReserveDialogOpen}>
@@ -412,6 +500,68 @@ export default function RaffleDetailsPage() {
                 onChange={(e) => setEditDrawDate(e.target.value)}
               />
             </div>
+            
+            <div>
+              <Label>Imagem Principal (Banner/Capa)</Label>
+              <div className="mt-1 flex items-center gap-4">
+                 {editImageUrl && (
+                   <div className="relative w-20 h-20 rounded border overflow-hidden shrink-0">
+                     <Image src={editImageUrl} alt="Preview" fill className="object-cover" />
+                     <button 
+                       type="button"
+                       onClick={() => setEditImageUrl('')}
+                       className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-bl"
+                     >
+                       <Trash2 className="w-3 h-3" />
+                     </button>
+                   </div>
+                 )}
+                 <Input 
+                   type="file" 
+                   accept="image/*"
+                   onChange={(e) => handleImageUpload(e, setEditImageUrl)}
+                 />
+              </div>
+              <Input 
+                 placeholder="Ou cole a URL da imagem aqui" 
+                 className="mt-2" 
+                 value={editImageUrl} 
+                 onChange={(e) => setEditImageUrl(e.target.value)} 
+              />
+            </div>
+
+            <div>
+              <Label>Imagem de Fundo do Bilhete</Label>
+              <div className="mt-1 flex items-center gap-4">
+                 {editBgUrl && (
+                   <div className="relative w-20 h-20 rounded border overflow-hidden shrink-0">
+                     <Image src={editBgUrl} alt="Preview" fill className="object-cover" />
+                     <button 
+                       type="button"
+                       onClick={() => setEditBgUrl('')}
+                       className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-bl"
+                     >
+                       <Trash2 className="w-3 h-3" />
+                     </button>
+                   </div>
+                 )}
+                 <Input 
+                   type="file" 
+                   accept="image/*"
+                   onChange={(e) => handleImageUpload(e, setEditBgUrl)}
+                 />
+              </div>
+              <Input 
+                 placeholder="Ou cole a URL da imagem aqui" 
+                 className="mt-2" 
+                 value={editBgUrl} 
+                 onChange={(e) => setEditBgUrl(e.target.value)} 
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                 Se deixar em branco, será usada a imagem principal com transparência.
+              </p>
+            </div>
+
             <div>
               <Label>Regulamento</Label>
               <Textarea

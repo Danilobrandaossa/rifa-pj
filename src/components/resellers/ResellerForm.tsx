@@ -52,12 +52,11 @@ export function ResellerForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="phone">Telefone</Label>
+            <Label htmlFor="phone">Telefone (Opcional)</Label>
             <Input 
               id="phone" 
               value={formData.phone} 
               onChange={e => setFormData({...formData, phone: e.target.value})} 
-              required 
             />
           </div>
           <div className="space-y-2">

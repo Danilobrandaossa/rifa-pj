@@ -31,16 +31,24 @@ export interface Ticket {
   buyerName?: string;
   buyerPhone?: string;
   reservedAt?: string;
+  resellerDeleted?: boolean; // For sold ticket history preservation
 }
 
 export interface Reseller {
   id: string;
   name: string;
-  phone: string;
+  phone?: string;
   pixKey?: string;
   commissionRate: number; // percentage (e.g., 10 for 10%)
   totalSales: number;
   balance: number;
+}
+
+export interface RaffleContextActionLog {
+  action: string;
+  timestamp: string;
+  userId?: string;
+  data: Partial<Raffle | Ticket | Reseller>;
 }
 
 export interface Sale {

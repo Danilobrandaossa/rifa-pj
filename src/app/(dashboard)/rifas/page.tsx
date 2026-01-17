@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Plus } from 'lucide-react';
 import { useRaffle } from '@/contexts/RaffleContext';
- 
+
 export default function RifasPage() {
   const { raffles, tickets } = useRaffle();
 
@@ -34,8 +35,21 @@ export default function RifasPage() {
           return (
             <Card key={raffle.id} className="overflow-hidden">
               <div className="aspect-video w-full bg-slate-100 relative">
-                 <div className="flex items-center justify-center h-full text-muted-foreground">Imagem da Rifa</div>
-                 <Badge className="absolute top-2 right-2 bg-green-500 hover:bg-green-600">Ativa</Badge>
+                {raffle.imageUrl ? (
+                  <Image
+                    src={raffle.imageUrl}
+                    alt={raffle.title}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    Imagem da Rifa
+                  </div>
+                )}
+                <Badge className="absolute top-2 right-2 bg-green-500 hover:bg-green-600">
+                  Ativa
+                </Badge>
               </div>
               <CardHeader>
                 <CardTitle className="line-clamp-1">{raffle.title}</CardTitle>

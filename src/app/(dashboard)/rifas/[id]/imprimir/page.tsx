@@ -145,9 +145,25 @@ export default function ImprimirBilhetesPage() {
   }: TicketRendererProps) => {
     if (!ticket || !raffle) return <div style={{ width: `${layout.width}mm`, height: `${layout.height}mm` }} />;
 
+    // Logic for background image:
+    // 1. bgImage (manual override from state)
+    // 2. raffle.ticketBackgroundUrl (specific ticket bg)
+    // 3. raffle.imageUrl (fallback, with opacity)
+    let activeBg = bgImage;
+    let isFallback = false;
+
+    if (!activeBg) {
+        if (raffle.ticketBackgroundUrl) {
+            activeBg = raffle.ticketBackgroundUrl;
+        } else if (raffle.imageUrl) {
+            activeBg = raffle.imageUrl;
+            isFallback = true;
+        }
+    }
+
     return (
       <div
-        className={`absolute border border-black overflow-hidden text-black ${!bgImage ? 'bg-white' : ''}`}
+        className={`absolute border border-black overflow-hidden text-black ${!activeBg ? 'bg-white' : ''}`}
         style={{
           top: `${layout.top}mm`,
           left: `${layout.left}mm`, // Posicionamento absoluto na folha
@@ -156,10 +172,10 @@ export default function ImprimirBilhetesPage() {
           fontSize: `${fonts.secondary}pt`
         }}
       >
-        {bgImage && (
-          <div className={`absolute inset-0 ${!printBg ? 'print:hidden' : ''}`}>
+        {activeBg && (
+          <div className={`absolute inset-0 ${!printBg ? 'print:hidden' : ''} ${isFallback ? 'opacity-20' : ''}`}>
             <Image
-              src={bgImage}
+              src={activeBg}
               alt="Fundo do Bilhete"
               fill
               style={{ objectFit: "fill" }}
