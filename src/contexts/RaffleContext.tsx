@@ -570,7 +570,12 @@ export function RaffleProvider({ children }: { children: ReactNode }) {
 
           sortedTickets.forEach(ticket => {
             if (ticket.groupLetter && ticket.groupLetter !== currentGroup) {
-              ensureSpace(2);
+              if (currentColumn > 0) {
+                y += lineHeight;
+                currentColumn = 0;
+              }
+
+              ensureSpace(3);
               y += lineHeight;
               doc.setFont('helvetica', 'bold');
               doc.text(`Grupo ${ticket.groupLetter}`, marginLeft, y);
@@ -585,6 +590,11 @@ export function RaffleProvider({ children }: { children: ReactNode }) {
               typeof ticket.block === 'number' &&
               ticket.block !== currentBlock
             ) {
+              if (currentColumn > 0) {
+                y += lineHeight;
+                currentColumn = 0;
+              }
+
               const ticketsInBlock = sortedTickets.filter(
                 t =>
                   t.groupLetter === ticket.groupLetter &&
@@ -592,6 +602,7 @@ export function RaffleProvider({ children }: { children: ReactNode }) {
               ).length;
 
               ensureSpace(2);
+              y += lineHeight * 0.5;
               doc.setFont('helvetica', 'bold');
               doc.text(
                 `Subgrupo ${ticket.groupLetter}${ticket.block} (${ticketsInBlock} bilhetes)`,
