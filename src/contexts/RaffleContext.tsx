@@ -127,6 +127,7 @@ interface RaffleContextType {
     totalCommissions: number;
     estimatedProfit: number;
   };
+  exportTicketsToPdf: (raffleId: string) => void;
 }
 
 const RaffleContext = createContext<RaffleContextType | undefined>(undefined);
@@ -162,6 +163,55 @@ export function RaffleProvider({ children }: { children: ReactNode }) {
     }
   }, [tickets, raffles, resellers, sales]);
 
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== 'rifa_gestor_data' || !event.newValue) return;
+
+      try {
+        const parsed = JSON.parse(event.newValue);
+        if (parsed.tickets) setTickets(parsed.tickets);
+        if (parsed.raffles) setRaffles(parsed.raffles);
+        if (parsed.resellers) setResellers(parsed.resellers);
+        if (parsed.sales) setSales(parsed.sales);
+      } catch (e) {
+        console.error('Failed to sync localStorage', e);
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const loadFromApi = async () => {
+      try {
+        const response = await fetch('/api/rifas');
+        if (!response.ok) return;
+        const apiRaffles: Raffle[] = await response.json();
+        if (!apiRaffles || apiRaffles.length === 0) return;
+
+        setRaffles(prev => {
+          const existingIds = new Set(prev.map(r => r.id));
+          const merged = [...prev];
+          apiRaffles.forEach(r => {
+            if (!existingIds.has(r.id)) merged.push(r);
+          });
+          return merged;
+        });
+      } catch (e) {
+        console.error('Failed to load raffles from API', e);
+      }
+    };
+
+    loadFromApi();
+  }, []);
+
   const createRaffle = useCallback((raffle: Raffle) => {
     setRaffles((prev) => [...prev, raffle]);
     setTickets((prev) => {
@@ -170,6 +220,17 @@ export function RaffleProvider({ children }: { children: ReactNode }) {
       const raffleTickets = buildTicketsForRaffle(raffle);
       return [...prev, ...raffleTickets];
     });
+    if (typeof window !== 'undefined') {
+      void fetch('/api/rifas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(raffle),
+      }).catch((e) => {
+        console.error('Failed to persist raffle to API', e);
+      });
+    }
   }, []);
 
   const updateRaffle = useCallback((id: string, data: Partial<Raffle>) => {
@@ -411,42 +472,184 @@ export function RaffleProvider({ children }: { children: ReactNode }) {
 
   const getFinancialStats = useCallback((raffleId: string) => {
     const currentRaffle = raffles.find(r => r.id === raffleId);
-    if (!currentRaffle) return {
+    if (!currentRaffle) {
+      return {
         totalPotentialValue: 0,
         soldCount: 0,
         reservedCount: 0,
         totalSalesValue: 0,
         totalCommissions: 0,
-        estimatedProfit: 0
-    };
+        estimatedProfit: 0,
+      };
+    }
 
     const totalPotentialValue = currentRaffle.totalTickets * currentRaffle.price;
     const soldTickets = tickets.filter(t => t.status === 'sold');
     const reservedTickets = tickets.filter(t => t.status === 'reserved');
     const soldCount = soldTickets.length;
     const totalSalesValue = soldCount * currentRaffle.price;
-    
+
     let totalCommissions = 0;
     soldTickets.forEach(ticket => {
-        if (ticket.resellerId) {
-            const reseller = resellers.find(r => r.id === ticket.resellerId);
-            if (reseller) {
-                totalCommissions += currentRaffle.price * (reseller.commissionRate / 100);
-            }
+      if (ticket.resellerId) {
+        const reseller = resellers.find(r => r.id === ticket.resellerId);
+        if (reseller) {
+          totalCommissions += currentRaffle.price * (reseller.commissionRate / 100);
         }
+      }
     });
 
     const estimatedProfit = totalSalesValue - totalCommissions;
 
     return {
-        totalPotentialValue,
-        soldCount,
-        reservedCount: reservedTickets.length,
-        totalSalesValue,
-        totalCommissions,
-        estimatedProfit
+      totalPotentialValue,
+      soldCount,
+      reservedCount: reservedTickets.length,
+      totalSalesValue,
+      totalCommissions,
+      estimatedProfit,
     };
   }, [tickets, raffles, resellers]);
+
+  const exportTicketsToPdf = useCallback(
+    (raffleId: string) => {
+      const raffle = raffles.find(r => r.id === raffleId);
+      if (!raffle) return;
+
+      const raffleTickets = tickets.filter(t => t.raffleId === raffleId);
+      if (raffleTickets.length === 0) return;
+
+      const sortedTickets = [...raffleTickets].sort((a, b) => {
+        if (a.groupLetter && b.groupLetter && a.groupLetter !== b.groupLetter) {
+          return a.groupLetter.localeCompare(b.groupLetter);
+        }
+        if (a.block && b.block && a.block !== b.block) {
+          return a.block - b.block;
+        }
+        const aNum = parseInt(a.number, 10);
+        const bNum = parseInt(b.number, 10);
+        return aNum - bNum;
+      });
+
+      import('jspdf').then(module => {
+        const JsPdf = module.default;
+        const doc = new JsPdf();
+
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const marginLeft = 10;
+        const marginTop = 15;
+        const marginRight = 10;
+        const lineHeight = 6;
+        const columnCount = 4;
+        const columnWidth = (pageWidth - marginLeft - marginRight) / columnCount;
+        const contentBottom = pageHeight - marginTop;
+
+        let y = marginTop;
+
+        const ensureSpace = (lines: number) => {
+          if (y + lines * lineHeight > contentBottom) {
+            doc.addPage();
+            y = marginTop;
+          }
+        };
+
+        doc.setFontSize(16);
+        doc.text(raffle.title, marginLeft, y);
+        y += lineHeight + 4;
+        doc.setFontSize(12);
+        doc.text(`Total de Bilhetes: ${sortedTickets.length}`, marginLeft, y);
+        y += lineHeight + 2;
+
+        if (raffle.modality === 'ten_thousand') {
+          let currentGroup: string | undefined;
+          let currentBlock: number | undefined;
+          let currentColumn = 0;
+
+          doc.setFontSize(10);
+
+          sortedTickets.forEach(ticket => {
+            if (ticket.groupLetter && ticket.groupLetter !== currentGroup) {
+              ensureSpace(2);
+              y += lineHeight;
+              doc.setFont('helvetica', 'bold');
+              doc.text(`Grupo ${ticket.groupLetter}`, marginLeft, y);
+              y += lineHeight;
+              currentGroup = ticket.groupLetter;
+              currentBlock = undefined;
+              currentColumn = 0;
+            }
+
+            if (
+              ticket.groupLetter &&
+              typeof ticket.block === 'number' &&
+              ticket.block !== currentBlock
+            ) {
+              const ticketsInBlock = sortedTickets.filter(
+                t =>
+                  t.groupLetter === ticket.groupLetter &&
+                  t.block === ticket.block,
+              ).length;
+
+              ensureSpace(2);
+              doc.setFont('helvetica', 'bold');
+              doc.text(
+                `Subgrupo ${ticket.groupLetter}${ticket.block} (${ticketsInBlock} bilhetes)`,
+                marginLeft,
+                y,
+              );
+              y += lineHeight;
+              doc.setFont('helvetica', 'normal');
+              currentBlock = ticket.block;
+              currentColumn = 0;
+            }
+
+            ensureSpace(1);
+
+            let displayText = ticket.number;
+            if (
+              ticket.groupLetter &&
+              typeof ticket.block === 'number'
+            ) {
+              displayText = `${ticket.number}${ticket.groupLetter}${ticket.block}`;
+            }
+
+            const x = marginLeft + currentColumn * columnWidth;
+            doc.text(displayText, x, y);
+
+            currentColumn += 1;
+            if (currentColumn >= columnCount) {
+              currentColumn = 0;
+              y += lineHeight;
+            }
+          });
+        } else {
+          let currentColumn = 0;
+
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'bold');
+          doc.text('Bilhetes', marginLeft, y);
+          y += lineHeight;
+          doc.setFont('helvetica', 'normal');
+
+          sortedTickets.forEach(ticket => {
+            ensureSpace(1);
+            const x = marginLeft + currentColumn * columnWidth;
+            doc.text(ticket.number, x, y);
+
+            currentColumn += 1;
+            if (currentColumn >= columnCount) {
+              currentColumn = 0;
+              y += lineHeight;
+            }
+          });
+        }
+
+        doc.save(`rifa-${raffle.id}-bilhetes.pdf`);
+      });
+    },
+    [raffles, tickets],
+  );
 
   return (
     <RaffleContext.Provider value={{ 
@@ -468,7 +671,8 @@ export function RaffleProvider({ children }: { children: ReactNode }) {
       revokeTicketsFromReseller,
       deleteTickets,
       clearRaffleTickets,
-      getFinancialStats 
+      getFinancialStats,
+      exportTicketsToPdf
     }}>
       {children}
     </RaffleContext.Provider>

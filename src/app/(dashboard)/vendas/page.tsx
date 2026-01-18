@@ -15,8 +15,8 @@ export default function VendasPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Vendas</h2>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tighter">Vendas</h2>
       </div>
 
       <Card>
@@ -24,44 +24,56 @@ export default function VendasPage() {
           <CardTitle>Histórico de Vendas</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Data</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Revendedor</TableHead>
-                <TableHead>Qtd. Bilhetes</TableHead>
-                <TableHead>Valor Total</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sales.map((sale) => (
-                <TableRow key={sale.id}>
-                  <TableCell>
-                    {new Date(sale.createdAt).toLocaleDateString('pt-BR')} {' '}
-                    {new Date(sale.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                  </TableCell>
-                  <TableCell>{sale.buyerName}</TableCell>
-                  <TableCell>{getResellerName(sale.resellerId)}</TableCell>
-                  <TableCell>{sale.ticketNumbers.length}</TableCell>
-                  <TableCell>R$ {sale.totalAmount.toFixed(2)}</TableCell>
-                  <TableCell>
-                    <Badge variant={sale.paymentStatus === 'paid' ? 'default' : 'secondary'}>
-                      {sale.paymentStatus === 'paid' ? 'Pago' : 'Pendente'}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {sales.length === 0 && (
+          <div className="w-full overflow-x-auto">
+            <Table className="min-w-[700px]">
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
-                    Nenhuma venda registrada.
-                  </TableCell>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Revendedor</TableHead>
+                  <TableHead>Qtd. Bilhetes</TableHead>
+                  <TableHead>Valor Total</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {sales.map((sale) => (
+                  <TableRow key={sale.id}>
+                    <TableCell>
+                      {new Date(sale.createdAt).toLocaleDateString('pt-BR')}{" "}
+                      {new Date(sale.createdAt).toLocaleTimeString('pt-BR', {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </TableCell>
+                    <TableCell>{sale.buyerName}</TableCell>
+                    <TableCell>{getResellerName(sale.resellerId)}</TableCell>
+                    <TableCell>{sale.ticketNumbers.length}</TableCell>
+                    <TableCell>R$ {sale.totalAmount.toFixed(2)}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          sale.paymentStatus === "paid" ? "default" : "secondary"
+                        }
+                      >
+                        {sale.paymentStatus === "paid" ? "Pago" : "Pendente"}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {sales.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="text-center text-muted-foreground"
+                    >
+                      Nenhuma venda registrada.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

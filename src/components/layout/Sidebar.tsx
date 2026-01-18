@@ -24,29 +24,35 @@ const menuItems = [
   { href: '/configuracoes', label: 'Configurações', icon: Settings },
 ];
 
-export function Sidebar() {
+type SidebarContentProps = {
+  onItemClick?: () => void;
+};
+
+export function SidebarContent({ onItemClick }: SidebarContentProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-slate-950 text-white transition-transform print:hidden">
+    <div className="flex h-full flex-col bg-slate-950 text-white">
       <div className="flex h-16 items-center justify-center border-b border-slate-800 px-6">
-        <h1 className="text-xl font-bold tracking-tight">RifaGestor</h1>
+        <h1 className="text-xl font-bold tracking-tighter">RifaGestor</h1>
       </div>
 
-      <div className="h-[calc(100vh-4rem)] overflow-y-auto px-3 py-4">
+      <div className="relative flex-1 overflow-y-auto px-3 py-4">
         <ul className="space-y-2 font-medium">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-            
+            const isActive =
+              pathname === item.href || pathname.startsWith(`${item.href}/`);
+
             return (
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  onClick={onItemClick}
                   className={cn(
                     "flex items-center rounded-lg p-3 transition-colors group",
-                    isActive 
-                      ? "bg-blue-600 text-white" 
+                    isActive
+                      ? "bg-blue-600 text-white"
                       : "text-slate-400 hover:bg-slate-800 hover:text-white"
                   )}
                 >
@@ -69,6 +75,14 @@ export function Sidebar() {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+export function Sidebar() {
+  return (
+    <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-slate-950 text-white transition-transform print:hidden hidden md:block">
+      <SidebarContent />
     </aside>
   );
 }

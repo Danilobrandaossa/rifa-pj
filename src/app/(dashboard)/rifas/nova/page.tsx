@@ -86,13 +86,13 @@ export default function NovaRifaPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Cadastrar Rifa</h2>
+      <div className="space-y-1">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tighter">Cadastrar Rifa</h2>
         <p className="text-muted-foreground text-sm">Preencha os detalhes para criar uma nova rifa.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           <div className="space-y-2">
             <Label>Título da Rifa*</Label>
             <Input
@@ -119,7 +119,7 @@ export default function NovaRifaPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           <div className="space-y-2">
             <Label>Modalidade da Rifa*</Label>
             <Select value={modality} onValueChange={(value) => setModality(value as typeof modality)}>
@@ -143,7 +143,7 @@ export default function NovaRifaPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
           <div className="space-y-2 lg:col-span-2">
             <Label>Foto Principal*</Label>
             <div className="border border-dashed rounded-md h-40 flex items-center justify-center text-sm text-muted-foreground mb-2">
@@ -207,7 +207,7 @@ export default function NovaRifaPage() {
           <Input type="file" accept="image/*" onChange={(e) => handleFileChange(e, setBackgroundUrl)} />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           <div className="space-y-2">
             <Label>Propósito da Rifa</Label>
             <Textarea
@@ -234,8 +234,8 @@ export default function NovaRifaPage() {
           </div>
         </div>
 
-        <div className="flex justify-end">
-          <Button type="submit">Salvar Rifa</Button>
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <Button type="submit" className="w-full sm:w-auto">Salvar Rifa</Button>
         </div>
       </form>
     </div>

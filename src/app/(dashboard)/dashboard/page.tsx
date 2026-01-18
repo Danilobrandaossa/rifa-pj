@@ -5,8 +5,8 @@ import { Ticket, DollarSign, CreditCard, Users } from "lucide-react";
 export default function DashboardPage() {
   return (
     <div className="flex-1 space-y-4">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tighter">Dashboard</h2>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -15,7 +15,7 @@ export default function DashboardPage() {
             <Ticket className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold tracking-tighter">12</div>
             <p className="text-xs text-muted-foreground">+2 desde o último mês</p>
           </CardContent>
         </Card>
@@ -25,7 +25,7 @@ export default function DashboardPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ 45.231,89</div>
+            <div className="text-2xl font-bold tracking-tighter">R$ 45.231,89</div>
             <p className="text-xs text-muted-foreground">+20.1% desde o último mês</p>
           </CardContent>
         </Card>
@@ -35,7 +35,7 @@ export default function DashboardPage() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ 12.234,00</div>
+            <div className="text-2xl font-bold tracking-tighter">R$ 12.234,00</div>
             <p className="text-xs text-muted-foreground">+19% desde o último mês</p>
           </CardContent>
         </Card>
@@ -45,7 +45,7 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+573</div>
+            <div className="text-2xl font-bold tracking-tighter">+573</div>
             <p className="text-xs text-muted-foreground">+201 desde a última semana</p>
           </CardContent>
         </Card>

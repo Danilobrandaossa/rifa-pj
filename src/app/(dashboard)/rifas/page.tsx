@@ -14,16 +14,16 @@ export default function RifasPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Rifas</h2>
-        <Link href="/rifas/nova">
-          <Button>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tighter">Rifas</h2>
+        <Link href="/rifas/nova" className="w-full sm:w-auto">
+          <Button className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" /> Nova Rifa
           </Button>
         </Link>
       </div>
  
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {raffles.map((raffle) => {
           const raffleTickets = tickets.filter((t) => t.raffleId === raffle.id);
           const soldCount = raffleTickets.filter((t) => t.status === 'sold').length;

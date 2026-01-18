@@ -252,8 +252,7 @@ export default function ImprimirBilhetesPage() {
         }
       `}</style>
       
-      {/* --- SIDEBAR DE CONFIGURAÇÃO (Não imprime) --- */}
-      <div className="w-full lg:w-[400px] flex-shrink-0 space-y-6 p-6 bg-white border-r h-full overflow-y-auto print:hidden">
+      <div className="w-full lg:w-[400px] flex-shrink-0 space-y-6 p-4 md:p-6 bg-white border-b lg:border-b-0 lg:border-r h-full overflow-y-auto print:hidden">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Impressão</h2>
           <p className="text-sm text-muted-foreground">Configure o layout e filtros.</p>

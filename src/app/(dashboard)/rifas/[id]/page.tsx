@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TicketGrid } from '@/components/raffles/TicketGrid';
-import { ArrowLeft, Printer, Eye, Share2, Edit, Trash2, Ticket as TicketIcon } from 'lucide-react';
+import { ArrowLeft, Printer, Eye, Share2, Edit, Trash2, Ticket as TicketIcon, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { NewSaleModal } from '@/components/sales/NewSaleModal';
 import { ResellersTable } from '@/components/resellers/ResellersTable';
@@ -17,12 +17,11 @@ import { useRaffle } from '@/contexts/RaffleContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import Image from 'next/image';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 
 export default function RaffleDetailsPage() {
-  const { tickets, raffles, resellers, updateTicketStatus, getFinancialStats, generateTicketsForRaffle, regenerateTicketsForRaffle, updateRaffle, clearRaffleTickets } = useRaffle();
+  const { tickets, raffles, resellers, updateTicketStatus, getFinancialStats, generateTicketsForRaffle, regenerateTicketsForRaffle, updateRaffle, clearRaffleTickets, exportTicketsToPdf } = useRaffle();
   const params = useParams();
-  const router = useRouter();
   const routeId = params?.id as string | undefined;
 
   const currentRaffle = raffles.find((r) => r.id === routeId) || raffles[0];
@@ -190,21 +189,21 @@ export default function RaffleDetailsPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-2">
            <Link href="/rifas">
-             <Button variant="ghost" size="icon">
+             <Button variant="ghost" size="icon" className="md:size-9">
                <ArrowLeft className="h-4 w-4" />
              </Button>
            </Link>
            <div>
-             <h2 className="text-2xl font-bold tracking-tight">{currentRaffle?.title}</h2>
-             <p className="text-muted-foreground text-sm">({currentRaffle?.modality === 'ten_thousand' ? '0000-9999' : currentRaffle?.modality})</p>
+             <h2 className="text-xl md:text-2xl font-bold tracking-tight line-clamp-2">{currentRaffle?.title}</h2>
+             <p className="text-muted-foreground text-xs md:text-sm">({currentRaffle?.modality === 'ten_thousand' ? '0000-9999' : currentRaffle?.modality})</p>
            </div>
         </div>
-        
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 md:justify-end">
           {raffleTickets.length === 0 ? (
             <Button
                 variant="default"
                 size="sm"
+                className="w-full sm:w-auto"
                 onClick={handleGenerateTickets}
             >
                 Gerar Bilhetes
@@ -213,20 +212,30 @@ export default function RaffleDetailsPage() {
             <Button
                 variant="destructive"
                 size="sm"
+                className="w-full sm:w-auto"
                 onClick={handleClearTickets}
             >
                 <Trash2 className="mr-2 h-4 w-4" /> Excluir Bilhetes
             </Button>
           ) : null}
           <Link href={`/rifas/${currentRaffle.id}/imprimir`}>
-            <Button variant="secondary" size="sm">
+            <Button variant="secondary" size="sm" className="w-full sm:w-auto">
               <Printer className="mr-2 h-4 w-4" /> Imprimir Bilhetes
             </Button>
           </Link>
-           <Button
+          <Button
+            variant="secondary"
+            size="sm"
+            className="w-full sm:w-auto"
+            onClick={() => exportTicketsToPdf(currentRaffle.id)}
+          >
+            <FileText className="mr-2 h-4 w-4" /> Exportar PDF
+          </Button>
+          <Button
              variant="secondary"
              size="sm"
-             onClick={() => router.push(`/rifas/${currentRaffle.id}/bilhetes`)}
+             className="w-full sm:w-auto"
+             onClick={() => setActiveTab('tickets')}
            >
              <Eye className="mr-2 h-4 w-4" /> Ver Bilhetes
            </Button>
@@ -234,7 +243,7 @@ export default function RaffleDetailsPage() {
            <Button
              variant="outline"
              size="sm"
-             className="text-green-600 border-green-600 hover:bg-green-50"
+             className="w-full sm:w-auto text-green-600 border-green-600 hover:bg-green-50"
              onClick={() => setActiveTab('reservation')}
            >
              <Share2 className="mr-2 h-4 w-4" /> Enviar para Revendedor
@@ -242,6 +251,7 @@ export default function RaffleDetailsPage() {
            <Button
              variant="outline"
              size="sm"
+             className="w-full sm:w-auto"
              onClick={handleOpenEditDialog}
            >
              <Edit className="mr-2 h-4 w-4" /> Editar
@@ -249,6 +259,7 @@ export default function RaffleDetailsPage() {
            <Button
              variant="destructive"
              size="sm"
+             className="w-full sm:w-auto"
              onClick={() => alert('Exclusão de rifa ainda não foi implementada.')}
            >
              <Trash2 className="mr-2 h-4 w-4" /> Excluir
@@ -297,16 +308,14 @@ export default function RaffleDetailsPage() {
         </Card>
       )}
 
-      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="info">Informações</TabsTrigger>
-          <TabsTrigger value="tickets">Bilhetes</TabsTrigger>
-          <TabsTrigger value="financial">Caixa</TabsTrigger>
-          <TabsTrigger value="resellers">Revendedores</TabsTrigger>
-          <TabsTrigger value="reservation">Reserva de Bilhetes</TabsTrigger>
-          <TabsTrigger value="regulation">Regulamento</TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto pb-2">
+          <TabsList className="w-full justify-start sm:w-auto">
+            <TabsTrigger value="tickets" className="flex-1 sm:flex-none">Bilhetes</TabsTrigger>
+            <TabsTrigger value="details" className="flex-1 sm:flex-none">Detalhes</TabsTrigger>
+            <TabsTrigger value="reservation" className="flex-1 sm:flex-none">Reservar</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="info" className="space-y-4">
           <Card>
